@@ -22,7 +22,7 @@ contract DCNBidClaim is IClaim {
         deal = Deal(deal_);
     }
 
-    function makeBid(uint credits) public payable returns (uint id) {
+    function makeClaim(uint credits) public payable returns (uint id) {
         id = _makeClaim(keccak256(abi.encodePacked(deal, credits)));
         bids[id] = BidData(msg.value, credits);
     }
@@ -72,7 +72,7 @@ contract DCNBidClaim is IClaim {
 contract DCNAskClaim is IClaim {
     Deal public deal;
 
-    function makeAsk(bytes32 dealData) public returns (uint id) {
+    function makeClaim(bytes32 dealData) public returns (uint id) {
         id = _makeClaim(dealData);
     }
 }
