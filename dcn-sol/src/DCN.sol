@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "./Interfaces.sol";
 import "./Deal.sol";
 
-contract DCNBidClaim {
+contract DCNBidClaim is IClaim {
     function getData(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
@@ -14,7 +14,7 @@ contract DCNBidClaim {
     }
 }
 
-contract DCNAskClaim {
+contract DCNAskClaim is IClaim {
     function getData(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
