@@ -16,7 +16,7 @@ library SharedTypes {
         Rejected
     }
     struct Claim {
-        address claimContract;
+        IClaim claimContract;
         uint claimId;
     }
     struct BidData {
@@ -34,6 +34,16 @@ library SharedTypes {
 
 abstract contract IValidatable {
     function finalize(uint id, bool result) public virtual;
+}
+
+abstract contract IClaim {
+    uint claimCount;
+    mapping(uint => bytes32) public claims;
+
+    function _makeClaim(bytes32 claimHash) internal returns (uint id) {
+        id = ++claimCount;
+        claims[id] = claimHash;
+    }
 }
 
 abstract contract IValidator {
