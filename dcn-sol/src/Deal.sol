@@ -64,6 +64,11 @@ contract Deal is IValidatable {
             IClaim(claim.claimContract).creator(claim.claimId) == msg.sender,
             "Only the claim creator can call this function"
         );
+        require(
+            bids[bidId].status == SharedTypes.BidStatus.Open,
+            "Bid is not open"
+        );
+
         id = ++claimCount;
         claimIsBid[id] = false;
         asks[id] = SharedTypes.AskData(
@@ -89,10 +94,11 @@ contract Deal is IValidatable {
         if (claimIsBid[id]) {
             bids[id].status = result
                 ? SharedTypes.BidStatus.Open
-                : SharedTypes.BidStatus.Closed;
+                : SharedTypes.BidStatus.Canceled;
             emit BidFinalized(id, result);
         } else {
-            asks[id].status = result
+            asks[id].status = result &&
+                bids[asks[id].bidId].status == SharedTypes.BidStatus.Open
                 ? SharedTypes.AskStatus.Accepted
                 : SharedTypes.AskStatus.Rejected;
             emit AskFinalized(id, result);

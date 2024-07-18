@@ -6,7 +6,6 @@ library SharedTypes {
         Nonexistent,
         Validating,
         Open,
-        HasAsk,
         Closed,
         Canceled
     }
