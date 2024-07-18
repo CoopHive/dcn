@@ -92,13 +92,15 @@ contract Deal is IValidatable {
 
     function finalize(uint id, bool result) public override onlyValidator(id) {
         if (claimIsBid[id]) {
-            bids[id].status = result
+            bids[id].status = (result &&
+                bids[id].status == SharedTypes.BidStatus.Validating)
                 ? SharedTypes.BidStatus.Open
                 : SharedTypes.BidStatus.Canceled;
             emit BidFinalized(id, result);
         } else {
-            asks[id].status = result &&
-                bids[asks[id].bidId].status == SharedTypes.BidStatus.Open
+            asks[id].status = (result &&
+                asks[id].status == SharedTypes.AskStatus.Validating &&
+                bids[asks[id].bidId].status == SharedTypes.BidStatus.Open)
                 ? SharedTypes.AskStatus.Accepted
                 : SharedTypes.AskStatus.Rejected;
             emit AskFinalized(id, result);
