@@ -11,18 +11,6 @@ contract DCNBidClaim is IClaim {
     mapping(uint => uint) public collateralAvailable;
     mapping(uint => uint) public bidToClaim;
 
-    function claimCollateral(uint askId) public {
-        (, address creator, uint bidId, SharedTypes.AskStatus status) = deal
-            .asks(askId);
-        require(creator == msg.sender, "Not ask creator");
-        require(status == SharedTypes.AskStatus.Accepted, "Ask not accepted");
-
-        uint claimId = bidToClaim[bidId];
-        require(collateralAvailable[claimId] > 0, "No collateral to claim");
-        payable(msg.sender).transfer(collateralAvailable[claimId]);
-        collateralAvailable[claimId] = 0;
-    }
-
     function makeBid(bytes32 dealData) public payable returns (uint id) {
         id = _makeClaim(dealData);
         collateralAvailable[id] = msg.value;
@@ -39,6 +27,18 @@ contract DCNBidClaim is IClaim {
         payable(msg.sender).transfer(collateralAvailable[claimId]);
         collateralAvailable[claimId] = 0;
         deal.cancelBid(bidId);
+    }
+
+    function claimCollateral(uint askId) public {
+        (, address creator, uint bidId, SharedTypes.AskStatus status) = deal
+            .asks(askId);
+        require(creator == msg.sender, "Not ask creator");
+        require(status == SharedTypes.AskStatus.Accepted, "Ask not accepted");
+
+        uint claimId = bidToClaim[bidId];
+        require(collateralAvailable[claimId] > 0, "No collateral to claim");
+        payable(msg.sender).transfer(collateralAvailable[claimId]);
+        collateralAvailable[claimId] = 0;
     }
 }
 
