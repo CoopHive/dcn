@@ -7,41 +7,65 @@ import "./Deal.sol";
 contract DCNBidClaim is IClaim {
     // TODO modify collateral to EIP-6909 rather than ETH
 
+    Deal deal;
+
     struct BidData {
-        address deal;
         uint collateralAvailable;
         uint demandedCredits;
     }
 
     mapping(uint => BidData) public bids;
 
-    function makeBid(
-        uint credits,
-        address deal
-    ) public payable returns (uint id) {
-        id = _makeClaim(keccak256(abi.encodePacked(deal, credits)));
-        bids[id] = BidData(deal, msg.value, credits);
+    constructor(address deal_) {
+        // deal is contract-level rather than function-level because it has to be trusted;
+        // but a claim could be intended for multiple deals
+        deal = Deal(deal_);
     }
 
-    function cancelBid(uint claimId) public {
+    function makeBid(uint credits) public payable returns (uint id) {
+        id = _makeClaim(keccak256(abi.encodePacked(deal, credits)));
+        bids[id] = BidData(msg.value, credits);
+    }
+
+    function reclaimCollateral(uint dealClaimId) public {
         (
             SharedTypes.Claim memory claim,
             address bidCreator,
             SharedTypes.BidStatus status
-        ) = Deal(bids[claimId].deal).bids(claimId);
-
-        require(
-            claim.claimContract == this && claim.claimId == claimId,
-            "Claim contract or ID mismatch"
-        );
+        ) = deal.bids(dealClaimId);
+        require(claim.claimContract == this, "Claim contract mismatch");
         require(
             bidCreator == msg.sender,
             "Only the bidder can call this function"
         );
         require(status == SharedTypes.BidStatus.Open, "Bid is not open");
 
-        payable(msg.sender).transfer(bids[claimId].collateralAvailable);
-        bids[claimId].collateralAvailable = 0;
+        payable(bidCreator).transfer(bids[claim.claimId].collateralAvailable);
+        bids[claim.claimId].collateralAvailable = 0;
+    }
+
+    function collectCollateral(uint dealClaimId) public {
+        (
+            SharedTypes.Claim memory askClaim,
+            address askCreator,
+            uint bidId,
+            SharedTypes.AskStatus status
+        ) = deal.asks(dealClaimId);
+        (SharedTypes.Claim memory bidClaim, , ) = deal.bids(bidId);
+
+        require(askClaim.claimContract == this, "Claim contract mismatch");
+        require(
+            askCreator == msg.sender,
+            "Only the ask creator can call this function"
+        );
+        require(
+            status == SharedTypes.AskStatus.Accepted,
+            "Ask is not accepted"
+        );
+
+        payable(askCreator).transfer(
+            bids[bidClaim.claimId].collateralAvailable
+        );
     }
 }
 
@@ -79,7 +103,7 @@ contract DCNBidValidator is IValidator {
         SharedTypes.Claim memory claim
     ) public override onlyDeal {
         DCNBidClaim bid = DCNBidClaim(address(claim.claimContract));
-        (, uint collateralAvailable, uint demandedCredits) = bid.bids(
+        (uint collateralAvailable, uint demandedCredits) = bid.bids(
             claim.claimId
         );
         collateralAvailable >= unitPrice * demandedCredits

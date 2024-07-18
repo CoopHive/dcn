@@ -41,6 +41,10 @@ contract Deal is IValidatable {
     }
 
     function makeBid(SharedTypes.Claim memory claim) public returns (uint id) {
+        require(
+            IClaim(claim.claimContract).creator(claim.claimId) == msg.sender,
+            "Only the claim creator can call this function"
+        );
         id = ++claimCount;
         claimIsBid[id] = true;
         bids[id] = SharedTypes.BidData(
@@ -56,6 +60,10 @@ contract Deal is IValidatable {
         uint bidId,
         SharedTypes.Claim memory claim
     ) public returns (uint id) {
+        require(
+            IClaim(claim.claimContract).creator(claim.claimId) == msg.sender,
+            "Only the claim creator can call this function"
+        );
         id = ++claimCount;
         claimIsBid[id] = false;
         asks[id] = SharedTypes.AskData(
