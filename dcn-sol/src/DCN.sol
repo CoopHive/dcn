@@ -4,22 +4,22 @@ pragma solidity ^0.8.13;
 import "./Interfaces.sol";
 import "./Deal.sol";
 
-contract DCNBidClaim is IClaim {
-    function getData(uint claim) public override returns (bytes memory) {
+contract DCNBidClaim {
+    function getData(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
 
-    function getProof(uint claim) public override returns (bytes memory) {
+    function getProof(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
 }
 
-contract DCNAskClaim is IClaim {
-    function getData(uint claim) public override returns (bytes memory) {
+contract DCNAskClaim {
+    function getData(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
 
-    function getProof(uint claim) public override returns (bytes memory) {
+    function getProof(uint claim) public returns (bytes memory) {
         return abi.encodePacked(claim);
     }
 }

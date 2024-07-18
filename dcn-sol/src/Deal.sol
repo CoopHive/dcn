@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./SharedTypes.sol";
 import "./Interfaces.sol";
 
 contract Deal is IValidatable {

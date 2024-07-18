@@ -1,15 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./SharedTypes.sol";
+library SharedTypes {
+    enum BidStatus {
+        Nonexistent,
+        Validating,
+        Open,
+        HasAsk,
+        Closed
+    }
+    enum AskStatus {
+        Nonexistent,
+        Validating,
+        Accepted,
+        Rejected
+    }
+    struct Claim {
+        address claimContract;
+        uint claimId;
+    }
+    struct BidData {
+        Claim claim;
+        address creator;
+        BidStatus status;
+    }
+    struct AskData {
+        Claim claim;
+        address creator;
+        uint bidId;
+        AskStatus status;
+    }
+}
 
 abstract contract IValidatable {
     function finalize(uint id, bool result) public virtual;
-}
-
-abstract contract IClaim {
-    function getData(uint claim) public virtual returns (bytes memory);
-    function getProof(uint claim) public virtual returns (bytes memory);
 }
 
 abstract contract IValidator {
