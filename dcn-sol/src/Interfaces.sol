@@ -48,5 +48,8 @@ abstract contract IClaim {
 
 abstract contract IValidator {
     function startValidate(SharedTypes.Claim memory claim) public virtual;
-    function validate(uint id, bool result) public virtual; // should be protected, e.g. onlyOracle
+    function validate(
+        SharedTypes.Claim memory claim,
+        bool result
+    ) public virtual; // should be protected, e.g. onlyOracle
 }
