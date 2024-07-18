@@ -73,7 +73,7 @@ contract Deal is IValidatable {
             bids[id].status == SharedTypes.BidStatus.Open,
             "Bid is not open"
         );
-        bids[id].status = SharedTypes.BidStatus.Closed;
+        bids[id].status = SharedTypes.BidStatus.Canceled;
         emit BidCanceled(id);
     }
 

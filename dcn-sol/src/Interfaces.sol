@@ -7,7 +7,8 @@ library SharedTypes {
         Validating,
         Open,
         HasAsk,
-        Closed
+        Closed,
+        Canceled
     }
     enum AskStatus {
         Nonexistent,
@@ -39,10 +40,12 @@ abstract contract IValidatable {
 abstract contract IClaim {
     uint claimCount;
     mapping(uint => bytes32) public claims;
+    mapping(uint => address) public creator;
 
     function _makeClaim(bytes32 claimHash) internal returns (uint id) {
         id = ++claimCount;
         claims[id] = claimHash;
+        creator[id] = msg.sender;
     }
 }
 
