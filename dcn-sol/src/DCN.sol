@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./Interfaces.sol";
+import "./Deal.sol";
 
 contract DCNBidClaim is IClaim {
     function getData(uint claim) public override returns (bytes memory) {
@@ -45,9 +46,6 @@ contract DCNAskValidator is IValidator {
 
 contract DCNDeal is Deal {
     constructor()
-        Deal(
-            CDNBidValidator(address(new DCNBidValidator())),
-            CDNAskValidator(address(new DCNAskValidator()))
-        )
+        Deal(address(new DCNBidValidator()), address(new DCNAskValidator()))
     {}
 }
