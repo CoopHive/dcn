@@ -9,12 +9,12 @@ contract DCNBidClaim is IClaim {
 
     Deal deal;
 
-    struct BidData {
+    struct BidClaimData {
         uint collateralAvailable;
         uint demandedCredits;
     }
 
-    mapping(uint => BidData) public bids;
+    mapping(uint => BidClaimData) public bidClaims;
 
     constructor(address deal_) {
         // deal is contract-level rather than function-level because it has to be trusted;
@@ -24,15 +24,15 @@ contract DCNBidClaim is IClaim {
 
     function makeClaim(uint credits) public payable returns (uint id) {
         id = _makeClaim(keccak256(abi.encodePacked(deal, credits)));
-        bids[id] = BidData(msg.value, credits);
+        bidClaims[id] = BidClaimData(msg.value, credits);
     }
 
-    function reclaimCollateral(uint dealClaimId) public {
+    function reclaimCollateral(uint bidId) public {
         (
             SharedTypes.Claim memory claim,
             address bidCreator,
             SharedTypes.BidStatus status
-        ) = deal.bids(dealClaimId);
+        ) = deal.bids(bidId);
         require(claim.claimContract == this, "Claim contract mismatch");
         require(
             bidCreator == msg.sender,
@@ -40,17 +40,19 @@ contract DCNBidClaim is IClaim {
         );
         require(status == SharedTypes.BidStatus.Open, "Bid is not open");
 
-        payable(bidCreator).transfer(bids[claim.claimId].collateralAvailable);
-        bids[claim.claimId].collateralAvailable = 0;
+        payable(bidCreator).transfer(
+            bidClaims[claim.claimId].collateralAvailable
+        );
+        bidClaims[claim.claimId].collateralAvailable = 0;
     }
 
-    function collectCollateral(uint dealClaimId) public {
+    function collectCollateral(uint askId) public {
         (
             SharedTypes.Claim memory askClaim,
             address askCreator,
             uint bidId,
             SharedTypes.AskStatus status
-        ) = deal.asks(dealClaimId);
+        ) = deal.asks(askId);
         (SharedTypes.Claim memory bidClaim, , ) = deal.bids(bidId);
 
         require(askClaim.claimContract == this, "Claim contract mismatch");
@@ -64,7 +66,7 @@ contract DCNBidClaim is IClaim {
         );
 
         payable(askCreator).transfer(
-            bids[bidClaim.claimId].collateralAvailable
+            bidClaims[bidClaim.claimId].collateralAvailable
         );
     }
 }
@@ -103,7 +105,7 @@ contract DCNBidValidator is IValidator {
         SharedTypes.Claim memory claim
     ) public override onlyDeal {
         DCNBidClaim bid = DCNBidClaim(address(claim.claimContract));
-        (uint collateralAvailable, uint demandedCredits) = bid.bids(
+        (uint collateralAvailable, uint demandedCredits) = bid.bidClaims(
             claim.claimId
         );
         collateralAvailable >= unitPrice * demandedCredits
