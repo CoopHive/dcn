@@ -6,10 +6,10 @@ import "./Deal.sol";
 
 contract DCNBidClaim is IClaim {
     // TODO modify collateral to EIP-6909 rather than ETH
-    mapping(uint => uint) public collateralAvailable;
-
-    mapping(uint => uint) public bidToClaim;
     Deal public deal;
+
+    mapping(uint => uint) public collateralAvailable;
+    mapping(uint => uint) public bidToClaim;
 
     function claimCollateral(uint askId) public {
         (, address creator, uint bidId, SharedTypes.AskStatus status) = deal
