@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import "./Interfaces.sol";
-
+import "forge-std/console.sol";
 contract Deal is IValidatable {
     IValidator public bidValidator;
     IValidator public askValidator;

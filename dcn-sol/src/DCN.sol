@@ -104,7 +104,6 @@ contract DCNAskValidator is IValidator {
         );
         _;
     }
-
     function startValidate(
         SharedTypes.Claim memory claim
     ) public override onlyDeal {
