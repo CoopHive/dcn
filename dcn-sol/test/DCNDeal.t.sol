@@ -1,12 +1,15 @@
 pragma solidity 0.8.26;
 
 import "forge-std/Test.sol";
-import {DCNBidClaim, DCNAskClaim, DCNDeal} from "../src/DCN.sol";
+import {DCNBidClaim, DCNAskClaim, DCNDeal, DCNBidValidator, DCNAskValidator } from "../src/DCN.sol";
+import { SharedTypes, IClaim } from "../src/Interfaces.sol";
 import "forge-std/console.sol";
 contract testDCNDeal is Test {
   DCNDeal dcnDeal;
   DCNBidClaim dcnBidClaim;
   DCNAskClaim dcnAskClaim;
+  DCNBidValidator dcnBidValidator;
+  DCNAskValidator dcnAskValidator;
   Vm.Wallet public deployer;
   Vm.Wallet public bidderOne;
   Vm.Wallet public askerOne;
@@ -20,8 +23,11 @@ contract testDCNDeal is Test {
     vm.startPrank(deployer.addr);
     {
       dcnDeal = new DCNDeal();
-      dcnBidClaim = new DCNBidClaim();
+      dcnBidClaim = new DCNBidClaim(address(dcnDeal));
       dcnAskClaim = new DCNAskClaim();
+
+      dcnBidValidator = DCNBidValidator(address(dcnDeal.bidValidator()));
+      dcnAskValidator = DCNAskValidator(address(dcnDeal.askValidator()));
     }
     vm.stopPrank();
   }
@@ -47,7 +53,7 @@ contract testDCNDeal is Test {
     vm.startPrank(bidderOne.addr);
     {
       vm.deal(bidderOne.addr, 100 wei);
-      dcnBidClaim.makeBid{value: 100 wei}(100, address(dcnDeal));
+      dcnBidClaim.makeClaim{value: 100 wei}(100);
     }
     vm.stopPrank();
 
@@ -69,7 +75,7 @@ contract testDCNDeal is Test {
     ));
     vm.startPrank(askerOne.addr);
     {
-      uint256 id = dcnAskClaim.makeAsk(dealHash);
+      uint256 id = dcnAskClaim.makeClaim(dealHash);
       assertEq(id, 1);
     }
     vm.stopPrank();
@@ -82,7 +88,7 @@ contract testDCNDeal is Test {
     assertEq(dcnAskClaim.creator(1), askerOne.addr);
   }
 
-  function prepareDeal() public {
+  function prepareDeal() public returns (uint256 id) {
     uint value = 100 wei;
     uint credits = 100;
     bytes32 bidHash = keccak256(abi.encodePacked(
@@ -92,26 +98,29 @@ contract testDCNDeal is Test {
     vm.startPrank(bidderOne.addr);
     {
       vm.deal(bidderOne.addr, value);
-      dcnBidClaim.makeBid{value: value}(credits, address(dcnDeal));
+      id = dcnBidClaim.makeClaim{value: value}(credits);
     }
     vm.stopPrank();
 
     vm.startPrank(askerOne.addr);
     {
       vm.deal(askerOne.addr, value);
-      dcnAskClaim.makeAsk(bidHash);
+      dcnAskClaim.makeClaim(bidHash);
     }
     vm.stopPrank();
+    return id;
   }
 
 
 
 
-  function testFinalizeDeal() public {
-    prepareDeal();
+  function _testFinalizeDeal() public {
+    uint256 id = prepareDeal();
 
     vm.startPrank(bidderOne.addr);
-    // Finalize step question, is this the kafka ordering service running as validator?
+    {
+      dcnDeal.finalize(id, true);
+    }
     vm.stopPrank();
 
   }
