@@ -135,6 +135,7 @@ contract DCNAskValidator is IValidator {
         SharedTypes.Claim memory claim
     ) public override onlyDeal {
         // "we are on the path to decentralization"
+        // do have to check that a trusted party created the claim though
         deal.finalize(claim.claimId, true);
     }
 
