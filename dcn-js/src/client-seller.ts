@@ -39,7 +39,6 @@ await consumer.run({
     // claim collateral from on-chain (listen for validation event on-chain first)
     // submit ask on-chain & register credits in db
     // reply with ask-submitted message
-
     console.log({
       value: message.value.toString(),
     });
