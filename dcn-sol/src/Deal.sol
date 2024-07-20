@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.26;
 
 import "./Interfaces.sol";
-
+import "forge-std/console.sol";
 contract Deal is IValidatable {
-    IValidator bidValidator;
-    IValidator askValidator;
+    IValidator public bidValidator;
+    IValidator public askValidator;
 
     event BidCreated(uint id, SharedTypes.Claim claim);
     event AskCreated(uint id, SharedTypes.Claim claim, uint bidId);

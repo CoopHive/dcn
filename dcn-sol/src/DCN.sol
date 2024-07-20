@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.26;
 
 import "./Interfaces.sol";
 import "./Deal.sol";
@@ -130,7 +130,6 @@ contract DCNAskValidator is IValidator {
         );
         _;
     }
-
     function startValidate(
         SharedTypes.Claim memory claim
     ) public override onlyDeal {
