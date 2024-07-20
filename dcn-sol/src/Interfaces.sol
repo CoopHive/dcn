@@ -38,7 +38,7 @@ abstract contract IValidatable {
 }
 
 abstract contract IClaim {
-    uint claimCount;
+    uint public claimCount;
     mapping(uint => bytes32) public claims;
     mapping(uint => address) public creator;
 
