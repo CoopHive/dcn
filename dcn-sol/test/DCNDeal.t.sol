@@ -118,8 +118,32 @@ contract testDCNDeal is Test {
     uint bidId = prepareBid(SharedTypes.Claim(dcnBidClaim, bidClaimId));
   }
 
+  function testMakeAskClaim() public {
+    uint value = 50 wei;
+    uint credits = 100;
+    uint bidClaimId = prepareBidClaim(value, credits);
+    uint bidId = prepareBid(SharedTypes.Claim(dcnBidClaim, bidClaimId));
 
-  function _testMakeAsk() public {
+    bytes32 dealHash = keccak256(abi.encodePacked(
+      address(dcnDeal),
+      credits
+    ));
+    uint askClaimId = prepareAskClaim(dealHash);
+  }
+
+
+  function testMakeAsk() public {
+    uint value = 50 wei;
+    uint credits = 100;
+    uint bidClaimId = prepareBidClaim(value, credits);
+    uint bidId = prepareBid(SharedTypes.Claim(dcnBidClaim, bidClaimId));
+
+    bytes32 dealHash = keccak256(abi.encodePacked(
+      address(dcnDeal),
+      credits
+    ));
+    uint askClaimId = prepareAskClaim(dealHash);
+    uint askId = prepareAsk(bidId, SharedTypes.Claim(dcnAskClaim, askClaimId));
     /*
     uint256 value = 100 wei;
     uint256 credits = 100;
