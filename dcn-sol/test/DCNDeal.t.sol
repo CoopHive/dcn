@@ -47,11 +47,8 @@ contract testDCNDeal is Test {
   }
 
   function prepareBid(SharedTypes.Claim memory claim) public returns (uint256 bidId) {
-    vm.Prank(bidderOne.addr);
-    {
-      bidId = dcnDeal.makeBid(claim);
-    }
-    vm.stopPrank();
+    vm.prank(bidderOne.addr);
+    bidId = dcnDeal.makeBid(claim);
   }
 
   function prepareAskClaim(bytes32 bidHash) public returns (uint256 askId) {

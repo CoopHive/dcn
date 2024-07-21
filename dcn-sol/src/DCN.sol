@@ -85,7 +85,13 @@ contract DCNBidValidator is IValidator {
     address seller;
     uint unitPrice;
 
+    constructor(address deal_) {
+        deal = Deal(deal_);
+    }
+
     modifier onlyDeal() {
+      console.log("only Deal: msg.sender", msg.sender);
+      console.log("address(deal)", address(deal));
         require(
             msg.sender == address(deal),
             "Only the deal can call this function"
@@ -124,6 +130,9 @@ contract DCNBidValidator is IValidator {
 
 contract DCNAskValidator is IValidator {
     Deal public deal;
+    constructor(address deal_) {
+        deal = Deal(deal_);
+    }
     modifier onlyDeal() {
         require(
             msg.sender == address(deal),
@@ -145,10 +154,11 @@ contract DCNAskValidator is IValidator {
     ) public override {
         // do nothing since validation is immediate
     }
+
 }
 
 contract DCNDeal is Deal {
     constructor()
-        Deal(address(new DCNBidValidator()), address(new DCNAskValidator()))
+        Deal(address(new DCNBidValidator(address(this))), address(new DCNAskValidator(address(this))))
     {}
 }
