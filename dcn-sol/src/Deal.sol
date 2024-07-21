@@ -76,6 +76,7 @@ contract Deal is IValidatable {
 
         id = ++claimCount;
         claimIsBid[id] = false;
+        //should this be claimIsBid[claim.claimId] = false ?
         console.log('claim.claimContract', address(claim.claimContract));
         asks[id] = SharedTypes.AskData(
             claim,
