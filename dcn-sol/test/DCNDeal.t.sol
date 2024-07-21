@@ -13,6 +13,7 @@ contract testDCNDeal is Test {
   Vm.Wallet public deployer;
   Vm.Wallet public bidderOne;
   Vm.Wallet public askerOne;
+
   function setUp() public {
     string memory mnemonic = vm.envString("MNEMONIC");
 
@@ -28,6 +29,51 @@ contract testDCNDeal is Test {
 
       dcnBidValidator = DCNBidValidator(address(dcnDeal.bidValidator()));
       dcnAskValidator = DCNAskValidator(address(dcnDeal.askValidator()));
+    }
+    vm.stopPrank();
+  }
+  
+  function prepareBidClaim(uint256 value, uint256 credits) public returns (uint256 claimId) {
+    bytes32 bidHash = keccak256(abi.encodePacked(
+      address(dcnDeal),
+      credits
+    )); 
+    vm.startPrank(bidderOne.addr);
+    {
+      vm.deal(bidderOne.addr, value);
+      claimId = dcnBidClaim.makeClaim{value: value}(credits);
+    }
+    vm.stopPrank();
+  }
+
+  function prepareBid(SharedTypes.Claim memory claim) public returns (uint256 bidId) {
+    vm.Prank(bidderOne.addr);
+    {
+      bidId = dcnDeal.makeBid(claim);
+    }
+    vm.stopPrank();
+  }
+
+  function prepareAskClaim(bytes32 bidHash) public returns (uint256 askId) {
+   vm.startPrank(askerOne.addr);
+   {
+     askId = dcnAskClaim.makeClaim(bidHash);
+   } 
+   vm.stopPrank();
+  }
+
+  function prepareAsk(uint256 bidId, SharedTypes.Claim memory claim) public returns (uint256 askId) {
+   vm.startPrank(askerOne.addr);
+   {
+     askId = dcnDeal.makeAsk(bidId, claim);
+   } 
+   vm.stopPrank();
+  }
+  
+  function collectCollateral(uint256 askId) public {
+    vm.startPrank(askerOne.addr);
+    {
+      dcnBidClaim.collectCollateral(askId);
     }
     vm.stopPrank();
   }
@@ -50,48 +96,34 @@ contract testDCNDeal is Test {
   }
 
   function testMakeBidClaim() public {
-    vm.startPrank(bidderOne.addr);
-    {
-      vm.deal(bidderOne.addr, 100 wei);
-      dcnBidClaim.makeClaim{value: 100 wei}(100);
-    }
-    vm.stopPrank();
-
+    uint value = 50 wei;
+    uint credits = 100;
+    uint256 id = prepareBidClaim(value, credits);
     assertEq(dcnBidClaim.claimCount(), 1);
     assertEq(
       dcnBidClaim.claims(1),
       keccak256(abi.encodePacked(
         address(dcnDeal),
-        uint(100)
+        credits
       ))
     );
     assertEq(dcnBidClaim.creator(1), bidderOne.addr);
     
     (uint collateralAvailable, uint demandedCredits) = dcnBidClaim.bidClaims(1);
-    assertEq(collateralAvailable, 100 wei);
+    assertEq(collateralAvailable, 50 wei);
     assertEq(demandedCredits, 100);
-    SharedTypes.BidData memory bidData = dcnDeal.bids(1);
+  }
 
-/*
-    vm.startPrank(askerOne.addr);
-    {
-      dcnAskClaim.makeClaim(keccak256(
-        abi.encodePacked(
-          address(dcnDeal),
-          uint(100)
-      )
-      ));
-    }
-    vm.stopPrank();
-    (collateralAvailable, demandedCredits) = dcnAskClaim.bidClaims(1);
-    assertEq(collateralAvailable, 100 wei);
-    assertEq(demandedCredits, 100);
-*/
-
+  function testMakeBid() public {
+    uint value = 50 wei;
+    uint credits = 100;
+    uint bidClaimId = prepareBidClaim(value, credits);
+    uint bidId = prepareBid(SharedTypes.Claim(dcnBidClaim, bidClaimId));
   }
 
 
   function _testMakeAsk() public {
+    /*
     uint256 value = 100 wei;
     uint256 credits = 100;
     uint id = prepareBid(value, credits);
@@ -118,41 +150,15 @@ contract testDCNDeal is Test {
       dealHash
     );
     assertEq(dcnAskClaim.creator(1), askerOne.addr);
-  }
-
-  function prepareBid(uint256 value, uint256 credits) public returns (uint256 id) {
-    bytes32 bidHash = keccak256(abi.encodePacked(
-      address(dcnDeal),
-      credits
-    )); 
-    vm.startPrank(bidderOne.addr);
-    {
-      vm.deal(bidderOne.addr, value);
-      id = dcnBidClaim.makeClaim{value: value}(credits);
-    }
-    vm.stopPrank();
-
-  }
-
-  function prepareDeal() public returns (uint256 id) {
-    uint256 value = 100 wei;
-    uint256 credits = 100;
-    prepareBid(value, credits);
-    /*
-    vm.startPrank(askerOne.addr);
-    {
-      vm.deal(askerOne.addr, value);
-      dcnAskClaim.makeClaim(bidHash);
-    }
-    vm.stopPrank();
    */
-    return id;
   }
+
 
 
 
 
   function _testCollectCollateral() public {
+    /*
     uint256 id = prepareDeal();
 
     vm.startPrank(askerOne.addr);
@@ -160,6 +166,6 @@ contract testDCNDeal is Test {
       dcnBidClaim.collectCollateral(id);
     }
     vm.stopPrank();
-
+   */
   }
 }
