@@ -33,17 +33,14 @@ contract testDCNDeal is Test {
     vm.stopPrank();
   }
   
-  function prepareBidClaim(uint256 value, uint256 credits) public returns (uint256 claimId) {
+  function prepareBidClaim(uint256 value, uint256 credits) public returns (uint256 bidClaimId) {
     bytes32 bidHash = keccak256(abi.encodePacked(
       address(dcnDeal),
       credits
     )); 
-    vm.startPrank(bidderOne.addr);
-    {
+    vm.prank(bidderOne.addr);
       vm.deal(bidderOne.addr, value);
-      claimId = dcnBidClaim.makeClaim{value: value}(credits);
-    }
-    vm.stopPrank();
+      bidClaimId = dcnBidClaim.makeClaim{value: value}(credits);
   }
 
   function prepareBid(SharedTypes.Claim memory claim) public returns (uint256 bidId) {
@@ -51,28 +48,19 @@ contract testDCNDeal is Test {
     bidId = dcnDeal.makeBid(claim);
   }
 
-  function prepareAskClaim(bytes32 bidHash) public returns (uint256 askId) {
-   vm.startPrank(askerOne.addr);
-   {
-     askId = dcnAskClaim.makeClaim(bidHash);
-   } 
-   vm.stopPrank();
+  function prepareAskClaim(bytes32 bidHash) public returns (uint256 askClaimId) {
+   vm.prank(askerOne.addr);
+   askClaimId = dcnAskClaim.makeClaim(bidHash);
   }
 
   function prepareAsk(uint256 bidId, SharedTypes.Claim memory claim) public returns (uint256 askId) {
-   vm.startPrank(askerOne.addr);
-   {
-     askId = dcnDeal.makeAsk(bidId, claim);
-   } 
-   vm.stopPrank();
+   vm.prank(askerOne.addr);
+   askId = dcnDeal.makeAsk(bidId, claim);
   }
   
   function collectCollateral(uint256 askId) public {
-    vm.startPrank(askerOne.addr);
-    {
-      dcnBidClaim.collectCollateral(askId);
-    }
-    vm.stopPrank();
+    vm.prank(askerOne.addr);
+    dcnBidClaim.collectCollateral(askId);
   }
 
   function testLogState() public {
@@ -95,7 +83,7 @@ contract testDCNDeal is Test {
   function testMakeBidClaim() public {
     uint value = 50 wei;
     uint credits = 100;
-    uint256 id = prepareBidClaim(value, credits);
+    uint256 bidClaimId = prepareBidClaim(value, credits);
     assertEq(dcnBidClaim.claimCount(), 1);
     assertEq(
       dcnBidClaim.claims(1),
@@ -143,7 +131,7 @@ contract testDCNDeal is Test {
       credits
     ));
     uint askClaimId = prepareAskClaim(dealHash);
-    uint askId = prepareAsk(bidId, SharedTypes.Claim(dcnAskClaim, askClaimId));
+    uint askId = prepareAsk(askClaimId, SharedTypes.Claim(dcnAskClaim, askClaimId));
     /*
     uint256 value = 100 wei;
     uint256 credits = 100;

@@ -27,6 +27,11 @@ contract Deal is IValidatable {
         _;
     }
     modifier onlyValidator(uint id) {
+      console.log("claimIsBid:");
+      console.log(claimIsBid[id]);
+      console.log("message.sender", msg.sender);
+      console.log("address(bidValidator)", address(bidValidator) );
+      console.log("address(askValidator)", address(askValidator));
         require(
             (claimIsBid[id] && msg.sender == address(bidValidator)) ||
                 (!claimIsBid[id] && msg.sender == address(askValidator)),
