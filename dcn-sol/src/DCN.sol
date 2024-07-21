@@ -54,7 +54,8 @@ contract DCNBidClaim is IClaim {
             SharedTypes.AskStatus status
         ) = deal.asks(askId);
         (SharedTypes.Claim memory bidClaim, , ) = deal.bids(bidId);
-
+        console.log(address(this));
+        console.log(address(askClaim.claimContract));
         require(askClaim.claimContract == this, "Claim contract mismatch");
         require(
             askCreator == msg.sender,

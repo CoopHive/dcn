@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
-
+import "forge-std/console.sol";
 library SharedTypes {
     enum BidStatus {
         Nonexistent,
@@ -42,6 +42,8 @@ abstract contract IClaim {
     mapping(uint => address) public creator;
 
     function _makeClaim(bytes32 claimHash) internal returns (uint id) {
+      console.log("claimhash: ");
+      console.logBytes32(claimHash);
         id = ++claimCount;
         claims[id] = claimHash;
         creator[id] = msg.sender;
