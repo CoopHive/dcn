@@ -41,13 +41,23 @@ contract DCN2 {
 
   constructor() {}
 
-  function createCommit(Side side, uint256 counterOfferId) public payable returns (uint256 commitId) {
+  function createCommit(Side side, uint256 counterOfferId) public payable {
+    Status status = Status.Pending;
+    if (counterOfferId != 0) {
+      Commit storage counterOfferCommit = commits[counterOfferId];
+      if (counterOfferCommit.commiter == address(0)) {
+        revert NoCommit(counterOfferId);
+      }
+      status = Status.Open;
+    }
+
+    
     Commit memory commit = Commit({
       counterOfferId: counterOfferId, // 0 if unreferenced
       commiter: msg.sender,
       side: side,
       collateral: msg.value,
-      status: Status.Pending
+      status: status
     });
 
     commitCount++;
@@ -61,6 +71,7 @@ contract DCN2 {
       commit.side,
       commit.collateral
     );
+
   }
 
   function cancel(uint256 commitId) public {
