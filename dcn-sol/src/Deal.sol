@@ -30,11 +30,11 @@ contract Deal is IValidatable {
       console.log("claimIsBid:");
       console.log(claimIsBid[id]);
       console.log("message.sender", msg.sender);
-      console.log("address(bidValidator)", address(bidValidator) );
+      console.log("address(bidValidator)", address(bidValidator));
       console.log("address(askValidator)", address(askValidator));
         require(
             (claimIsBid[id] && msg.sender == address(bidValidator)) ||
-                (!claimIsBid[id] && msg.sender == address(askValidator)),
+            (/* !claimIsBid[id] &&  */ msg.sender == address(askValidator)),
             "Only the validator can call this function"
         );
         _;
@@ -78,6 +78,7 @@ contract Deal is IValidatable {
         claimIsBid[id] = false;
         //should this be claimIsBid[claim.claimId] = false ?
         console.log('claim.claimContract', address(claim.claimContract));
+
         asks[id] = SharedTypes.AskData(
             claim,
             msg.sender,

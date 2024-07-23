@@ -131,7 +131,7 @@ contract testDCNDeal is Test {
       credits
     ));
     uint askClaimId = prepareAskClaim(dealHash);
-    uint askId = prepareAsk(askClaimId, SharedTypes.Claim(dcnAskClaim, askClaimId));
+    uint askId = prepareAsk(bidId, SharedTypes.Claim(dcnAskClaim, askClaimId));
     /*
     uint256 value = 100 wei;
     uint256 credits = 100;
@@ -162,19 +162,18 @@ contract testDCNDeal is Test {
    */
   }
 
+  function testCollectCollateral() public {
+    uint value = 50 wei;
+    uint credits = 100;
+    uint bidClaimId = prepareBidClaim(value, credits);
+    uint bidId = prepareBid(SharedTypes.Claim(dcnBidClaim, bidClaimId));
+    bytes32 dealHash = keccak256(abi.encodePacked(
+      address(dcnDeal),
+      credits
+    ));
 
-
-
-
-  function _testCollectCollateral() public {
-    /*
-    uint256 id = prepareDeal();
-
-    vm.startPrank(askerOne.addr);
-    {
-      dcnBidClaim.collectCollateral(id);
-    }
-    vm.stopPrank();
-   */
+    uint askClaimId = prepareAskClaim(dealHash);
+    uint askId = prepareAsk(bidId, SharedTypes.Claim(dcnAskClaim, askClaimId));
+    collectCollateral(askId);
   }
 }

@@ -1,59 +1,5 @@
 pragma solidity 0.8.26;
-
-contract ExampleCommitmentScheme {
-
-	uint256 chainId;
-	bytes32 DOMAIN_SEPARATOR;
-
-  struct CommitScheme {
-    address commiter;
-    uint256 commitId;
-    bool isBuy;
-    uint256 collateral;
-    uint8 status;
-  }
-
-	bytes COMMITSCHEME_TYPE = "Commit(uint256 commitId,bool isBuy,uint256 collateral,uin8 status)";
-	bytes32 COMMITSCHEME_TYPE_HASH = keccak256(COMMITSCHEME_TYPE);
-
-	constructor () {
-		uint256 ch;
-		assembly {
-			ch := chainid()
-		}
-		DOMAIN_SEPARATOR = keccak256(
-			abi.encode(
-				keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-				keccak256(bytes("ExampleCommitmentScheme")),
-				keccak256(bytes("1")),
-				ch,
-				address(this)
-		)
-		);
-		chainId = ch;
-
-	}
-
-  function createCommit(
-    uint8 v,
-    bytes32 r,
-    bytes32 s,
-    bytes memory data
-  ) payable {
-    (uint256 commitId, bool isBuy, uint256 collateral, uint8 status) = abi.decode(data, (uint256, bool, uint256, uint8));
-
-    bytes32 hash = keccak256(abi.encode(commitId, isBuy, collateral, status));
-
-    require(ecrecover(hash, v, r, s) == msg.sender, "commit must be signed by msg.sender");
-    require(msg.value == collateral, "commit must be for full amount");
-    require(status == 0, "commit must be in status Pending");
-
-    Commit memory commit = Commit({commiter:msg.sender, commitId, isBuy, collateral, status});
-    emit CommitCreated(v, r, s);
-    return hash;
-  }
-
-}
+import { ICommitmentScheme } from "./ICommitmentScheme.sol";
 
 contract DCN3 {
 
@@ -66,6 +12,11 @@ contract DCN3 {
     bytes32 hash
 	);
 
+  event CommitValidated(
+    uint256 indexed commitId,
+    
+  )
+
   struct Commit {
     uint8 v;
     bytes32 r;
@@ -74,7 +25,7 @@ contract DCN3 {
   }
 
 	uint256 public commitCount;
-	mapping(uint256 => Commit) public commits;
+  mapping(address => mapping ( uint256 => Commit)) public commits;
 
 	error NotCaller(address given, address expected);
 	error CollateralMisMatch(uint256 given, uint256 expected);
@@ -90,7 +41,7 @@ contract DCN3 {
     bytes32 s,
     bytes memory data
 	) public payable {
-    bytes32 hash = ExampleCommitmentScheme(commitmentScheme).createCommit(v, r, s, data);
+    bytes32 hash = ICommitmentScheme(commitmentScheme).createCommit(v, r, s, data);
 		commitCount++;
     Commit memory commit = Commit({
       v: v,
@@ -98,7 +49,7 @@ contract DCN3 {
       s: s,
       hash: hash
     })
-		commits[commitCount] = commit;
+		commits[commitmentScheme][commitCount] = commit;
 
 		emit CommitCreated(
       commitCount,
@@ -108,8 +59,20 @@ contract DCN3 {
       s,
       hash
 		);
-
 	}
+  function executeCommit(
+    address commitmentScheme,
+    uint256 commitId,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes memory data
+  ) public {
+    Commit storage commit = commits[commitmentScheme][commitId];
+    require(commit.hash != 0, "Commit must exist");
+    bytes32 hash = ICommitmentScheme(commitmentScheme).executeCommit(commitId, v, r, s, data);
+
+  }
 /*
 	function cancel(uint256 commitId) public {
 		Commit storage commit = commits[commitId];
