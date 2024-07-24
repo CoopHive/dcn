@@ -63,14 +63,16 @@ contract DCN3 {
   function executeCommit(
     address commitmentScheme,
     uint256 commitId,
-    uint8 v,
-    bytes32 r,
-    bytes32 s,
-    bytes memory data
+    uint8 vf,
+    bytes32 rf,
+    bytes32 sf,
+    bytes memory datai,
+    bytes memory dataf
   ) public {
     Commit storage commit = commits[commitmentScheme][commitId];
     require(commit.hash != 0, "Commit must exist");
-    bytes32 hash = ICommitmentScheme(commitmentScheme).executeCommit(commitId, v, r, s, data);
+    bytes32 hash = ICommitmentScheme(commitmentScheme).executeCommit(
+      commitId, commit.v, commit.r, commit.s, datai, vf, rf, sf, dataf);
 
   }
 /*

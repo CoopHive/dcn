@@ -4,18 +4,22 @@ import { ICommitmentScheme } from "./ICommitmentScheme.sol";
 contract ExampleCommitmentScheme is ICommitmentScheme {
 
 	uint256 chainId;
-	bytes32 DOMAIN_SEPARATOR;
+	bytes32 public DOMAIN_SEPARATOR;
+  // status 
+  // 0 = Pending
+  // 1 - Ppen
+  // 2= closed
+  // 4 = Canceled
 
   struct CommitScheme {
-    address commiter;
-    uint256 commitId;
     bool isBuy;
     uint256 collateral;
     uint256 paymentAmount;
+    //address commiter;
     uint8 status;
   }
 
-	bytes COMMITSCHEME_TYPE = "Commit(uint256 commitId,bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
+	bytes COMMITSCHEME_TYPE = "Commit(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
 	bytes32 COMMITSCHEME_TYPE_HASH = keccak256(COMMITSCHEME_TYPE);
 
 	constructor () {
@@ -60,12 +64,40 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
 
   function executeCommit(
     uint256 commitId,
-    uin8 v,
-    bytes32 r,
-    bytes32 s,
-    bytes memory data
+    uint8 vi,
+    bytes32 ri,
+    bytes32 si,
+    bytes memory datai,
+    uint8 vf,
+    bytes32 rf,
+    bytes32 sf,
+    bytes memory dataf
   ) public payable return (bytes32 hash) {
 
+    (
+      uint256 commitIdI,
+      bool isBuyI,
+      uint256 collateralI,
+      uint256 paymentAmountI,
+      uint8 statusI
+    ) = abi.decode(datai, (uint256, bool, uint256, uint256, uint8));
+    (
+      uint256 commitIdF,
+      bool isBuyF,
+      uint256 collateralF,
+      uint256 paymentAmountF,
+      uint8 statusF
+    ) = abi.decode(dataf, (uint256, bool, uint256, uint256, uint8));
+    require(ecrecover(keccak256(datai), vi, ri, si) == msg.sender && ecrecover(keccak256(dataf), vf, rf, sf) == msg.sender, "commit must be signed by msg.sender");
+    require(commitIDI == commitIdF, "commit must be for same commit ID");
+
+    if (statusI == 0) {
+      if (statusF == 1) {
+        hash = keccak256(abi.encode(commitIdI, isBuyI, collateralI, paymentAmountI, statusF));
+      } else if (statusF == 2) {
+        // c
+      }
+    }
   }
 
 
