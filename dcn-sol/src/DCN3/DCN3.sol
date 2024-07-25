@@ -35,6 +35,7 @@ contract DCN3 {
   // "series" of credible commitments
   //mapping(address => mapping ( uint256 => Commit[])) public commits;
   mapping(address => mapping( uint256 => Commit )) public commits;
+  mapping(address => uint256) public usedNonces;
 
 	error NotCaller(address given, address expected);
 	error CollateralMisMatch(uint256 given, uint256 expected);
@@ -50,8 +51,8 @@ contract DCN3 {
     bytes32 s,
     bytes memory data
 	) public payable {
-    bytes32 hash = ICommitmentScheme(commitmentScheme).createCommit(v, r, s, data);
-		commitCount++;
+    (bytes32 hash) = ICommitmentScheme(commitmentScheme).createCommit(
+      commitCount, v, r, s, data, usedNonces[msg.sender]);
     Commit memory commit = Commit({
       v: v,
       r: r,
@@ -59,6 +60,8 @@ contract DCN3 {
       hash: hash
     });
 		commits[commitmentScheme][commitCount] = commit;
+		commitCount++;
+    usedNonces[msg.sender]++;
 
 		emit CommitCreated(
       commitCount,
@@ -75,22 +78,25 @@ contract DCN3 {
     uint8 vf,
     bytes32 rf,
     bytes32 sf,
-    bytes memory datai,
-    bytes memory dataf
+    bytes[2] memory data
   ) public {
     Commit storage commit = commits[commitmentScheme][commitId];
     require(commit.hash != 0, "Commit must exist");
     bytes32 hash = ICommitmentScheme(commitmentScheme).updateCommit(
+      commitId,
       [commit.v, vf],
       [commit.r, rf],
       [commit.s, sf],
-      [datai, dataf]
+      data,
+      usedNonces[msg.sender]
+
     );
 
     commit.v = vf;
     commit.r = rf;
     commit.s = sf;
     commit.hash = hash;
+    usedNonces[msg.sender]++;
 
     emit CommitUpdated(
       commitId,

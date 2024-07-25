@@ -25,7 +25,7 @@ contract testDCN3 is Test {
 
     vm.startPrank(deployer.addr);
     {
-      commitmentScheme = new ExampleCommitmentScheme();
+      commitmentScheme = new ExampleCommitmentScheme(address(dcn3));
       validationScheme = new ExampleValidationScheme();
       dcn3 = new DCN3();
     }
@@ -42,7 +42,8 @@ contract testDCN3 is Test {
         isBuy: true,
         collateral: 100,
         paymentAmount: 200,
-        status: 0
+        status: 0,
+        nonce: dcn3.usedNonces(demanderOne.addr) + 1
       });  
       bytes32 structHash = keccak256(
         abi.encode(
@@ -50,7 +51,8 @@ contract testDCN3 is Test {
           commitment.isBuy,
           commitment.collateral,
           commitment.paymentAmount,
-          commitment.status
+          commitment.status,
+          commitment.nonce
         )
       );
       bytes32 digest = keccak256(
@@ -58,7 +60,7 @@ contract testDCN3 is Test {
           "\x19\x01",
           commitmentScheme.DOMAIN_SEPARATOR(),
           structHash
-      )
+        )
       );
 
       (uint8 v, bytes32 r, bytes32 s) = vm.sign(demanderOne.privateKey, digest);
@@ -67,7 +69,8 @@ contract testDCN3 is Test {
         commitment.isBuy,
         commitment.collateral,
         commitment.paymentAmount,
-        commitment.status
+        commitment.status,
+        commitment.nonce
       ));
 
       

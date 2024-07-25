@@ -5,6 +5,7 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
 
 	uint256 chainId;
 	bytes32 public DOMAIN_SEPARATOR;
+  address dcn;
   // status 
   // 0 = Pending
   // 1 = Open
@@ -15,14 +16,14 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
     bool isBuy;
     uint256 collateral;
     uint256 paymentAmount;
-    //address commiter;
     uint8 status;
+    uint256 nonce;
   }
 
-	bytes COMMITSCHEME_TYPE = "CommitScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
+	bytes COMMITSCHEME_TYPE = "CommitScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status,uint256 nonce)";
 	bytes32 COMMITSCHEME_TYPE_HASH = keccak256(COMMITSCHEME_TYPE);
 
-	constructor () {
+	constructor (address _dcn) {
 		uint256 ch;
 		assembly {
 			ch := chainid()
@@ -37,36 +38,45 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
 		)
 		);
 		chainId = ch;
-
+    dcn = _dcn;
 	}
 
+  modifier onlyDcn() {
+    require(msg.sender == dcn, "only dcn");
+    _;
+  }
+
   function createCommit(
+    uint256 commitId,
     uint8 v,
     bytes32 r,
     bytes32 s,
-    bytes memory data
-  ) public returns (bytes32 hash) {
+    bytes memory data,
+    uint256 latestNonce
+  ) onlyDcn public returns (bytes32 hash) {
     (
-      uint256 commitId,
       bool isBuy,
       uint256 collateral,
       uint256 paymentAmount,
-      uint8 status
-    ) = abi.decode(data, (uint256, bool, uint256, uint256, uint8));
+      uint8 status,
+      uint256 nonce
+    ) = abi.decode(data, (bool, uint256, uint256, uint8, uint256));
+    require(latestNonce + 1 == nonce, "nonce must increment");
     // equiv as hash = keccak256(data) ?
-    hash = keccak256(abi.encode(commitId, isBuy, collateral, paymentAmount, status));
-
-
+    hash = keccak256(abi.encode(isBuy, collateral, paymentAmount, status));
+    
     require(ecrecover(hash, v, r, s) == msg.sender, "commit must be signed by msg.sender");
     //require(msg.value == collateral, "commit must be for full amount");
     require(status == 0, "commit must be in status Pending");
   }
 
   function updateCommit(
+    uint256 commitId,
     uint8[2] memory v,
     bytes32[2] memory r,
     bytes32[2] memory s,
-    bytes[2] memory data
+    bytes[2] memory data,
+    uint256 latestNonce
   ) public returns (bytes32 hash) {
 
     (
