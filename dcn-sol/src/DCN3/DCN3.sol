@@ -11,11 +11,18 @@ contract DCN3 {
 		bytes32 s,
     bytes32 hash
 	);
+  event CommitUpdated(
+    uint256 indexed commitId,
+    address indexed commiter,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes32 hash
+  );
 
   event CommitValidated(
-    uint256 indexed commitId,
-    
-  )
+    uint256 indexed commitId
+  );
 
   struct Commit {
     uint8 v;
@@ -25,7 +32,9 @@ contract DCN3 {
   }
 
 	uint256 public commitCount;
-  mapping(address => mapping ( uint256 => Commit)) public commits;
+  // "series" of credible commitments
+  //mapping(address => mapping ( uint256 => Commit[])) public commits;
+  mapping(address => mapping( uint256 => Commit )) public commits;
 
 	error NotCaller(address given, address expected);
 	error CollateralMisMatch(uint256 given, uint256 expected);
@@ -48,7 +57,7 @@ contract DCN3 {
       r: r,
       s: s,
       hash: hash
-    })
+    });
 		commits[commitmentScheme][commitCount] = commit;
 
 		emit CommitCreated(
@@ -60,7 +69,7 @@ contract DCN3 {
       hash
 		);
 	}
-  function executeCommit(
+  function updateCommit(
     address commitmentScheme,
     uint256 commitId,
     uint8 vf,
@@ -71,8 +80,27 @@ contract DCN3 {
   ) public {
     Commit storage commit = commits[commitmentScheme][commitId];
     require(commit.hash != 0, "Commit must exist");
-    bytes32 hash = ICommitmentScheme(commitmentScheme).executeCommit(
-      commitId, commit.v, commit.r, commit.s, datai, vf, rf, sf, dataf);
+    bytes32 hash = ICommitmentScheme(commitmentScheme).updateCommit(
+      [commit.v, vf],
+      [commit.r, rf],
+      [commit.s, sf],
+      [datai, dataf]
+    );
+
+    commit.v = vf;
+    commit.r = rf;
+    commit.s = sf;
+    commit.hash = hash;
+
+    emit CommitUpdated(
+      commitId,
+      msg.sender,
+      vf,
+      rf,
+      sf,
+      hash
+    );
+    
 
   }
 /*

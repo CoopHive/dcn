@@ -1,9 +1,10 @@
 pragma solidity 0.8.26;
 
-import { DCN3 } from "../src/DCN3.sol";
+import { DCN3 } from "../src/DCN3/DCN3.sol";
 import { ExampleCommitmentScheme  } from "../src/DCN3/ExampleCommitmentScheme.sol";
 import { ExampleValidationScheme } from "../src/DCN3/ExampleValidationScheme.sol";
-
+import { ICommitmentScheme } from "../src/DCN3/ICommitmentScheme.sol";
+import { IValidationScheme } from "../src/DCN3/IValidationScheme.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
@@ -33,11 +34,11 @@ contract testDCN3 is Test {
   }
 
   function testCreateCommit() public {
-    vm.startPrank(demanderOne.addr)
+    vm.startPrank(demanderOne.addr);
     {
-      bytes COMMITSCHEME_TYPE = "Commit(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
+      bytes memory COMMITSCHEME_TYPE = "CommitScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
       bytes32 COMMITSCHEME_TYPE_HASH = keccak256(COMMITSCHEME_TYPE);
-      ExampleCommitmentScheme.Commit memory commitment = ExampleCommitmentScheme.Commit({
+      ExampleCommitmentScheme.CommitScheme memory commitment = ExampleCommitmentScheme.CommitScheme({
         isBuy: true,
         collateral: 100,
         paymentAmount: 200,
@@ -45,24 +46,22 @@ contract testDCN3 is Test {
       });  
       bytes32 structHash = keccak256(
         abi.encode(
-          COOMMITSCHEME_TYPE_HASH,
+          COMMITSCHEME_TYPE_HASH,
           commitment.isBuy,
           commitment.collateral,
           commitment.paymentAmount,
           commitment.status
         )
-      )
       );
-
       bytes32 digest = keccak256(
         abi.encodePacked(
           "\x19\x01",
-          commitmentScheme.DOMAIN_SEPARATOR,
+          commitmentScheme.DOMAIN_SEPARATOR(),
           structHash
       )
       );
 
-      (uint8 v, bytes32 r, bytes32 s) = vm.sign(dmeanderOne.privateKey, digest);
+      (uint8 v, bytes32 r, bytes32 s) = vm.sign(demanderOne.privateKey, digest);
 
       dcn3.createCommit(address(commitmentScheme), v, r, s, abi.encode(
         commitment.isBuy,

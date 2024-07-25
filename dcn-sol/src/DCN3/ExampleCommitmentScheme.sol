@@ -7,10 +7,10 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
 	bytes32 public DOMAIN_SEPARATOR;
   // status 
   // 0 = Pending
-  // 1 - Ppen
-  // 2= closed
+  // 1 = Open
+  // 2 = Validating
+  // 3 = Closed
   // 4 = Canceled
-
   struct CommitScheme {
     bool isBuy;
     uint256 collateral;
@@ -19,7 +19,7 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
     uint8 status;
   }
 
-	bytes COMMITSCHEME_TYPE = "Commit(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
+	bytes COMMITSCHEME_TYPE = "CommitScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
 	bytes32 COMMITSCHEME_TYPE_HASH = keccak256(COMMITSCHEME_TYPE);
 
 	constructor () {
@@ -45,7 +45,7 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
     bytes32 r,
     bytes32 s,
     bytes memory data
-  ) public payable returns (bytes32 hash) {
+  ) public returns (bytes32 hash) {
     (
       uint256 commitId,
       bool isBuy,
@@ -54,51 +54,50 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
       uint8 status
     ) = abi.decode(data, (uint256, bool, uint256, uint256, uint8));
     // equiv as hash = keccak256(data) ?
-    hash = keccak256(abi.encode(commitId, isBuy, collateral, msg.value, status));
+    hash = keccak256(abi.encode(commitId, isBuy, collateral, paymentAmount, status));
 
 
     require(ecrecover(hash, v, r, s) == msg.sender, "commit must be signed by msg.sender");
-    require(msg.value == collateral, "commit must be for full amount");
+    //require(msg.value == collateral, "commit must be for full amount");
     require(status == 0, "commit must be in status Pending");
   }
 
-  function executeCommit(
-    uint256 commitId,
-    uint8 vi,
-    bytes32 ri,
-    bytes32 si,
-    bytes memory datai,
-    uint8 vf,
-    bytes32 rf,
-    bytes32 sf,
-    bytes memory dataf
-  ) public payable return (bytes32 hash) {
+  function updateCommit(
+    uint8[2] memory v,
+    bytes32[2] memory r,
+    bytes32[2] memory s,
+    bytes[2] memory data
+  ) public returns (bytes32 hash) {
 
     (
-      uint256 commitIdI,
-      bool isBuyI,
-      uint256 collateralI,
-      uint256 paymentAmountI,
-      uint8 statusI
-    ) = abi.decode(datai, (uint256, bool, uint256, uint256, uint8));
+      uint256 iCommitId,
+      ,
+      ,
+      ,
+      uint8 iStatus
+    ) = abi.decode(data[0], (uint256, bool, uint256, uint256, uint8));
     (
-      uint256 commitIdF,
-      bool isBuyF,
-      uint256 collateralF,
-      uint256 paymentAmountF,
-      uint8 statusF
-    ) = abi.decode(dataf, (uint256, bool, uint256, uint256, uint8));
-    require(ecrecover(keccak256(datai), vi, ri, si) == msg.sender && ecrecover(keccak256(dataf), vf, rf, sf) == msg.sender, "commit must be signed by msg.sender");
-    require(commitIDI == commitIdF, "commit must be for same commit ID");
+      uint256 fCommitId,
+      ,
+      ,
+      ,
+      uint8 fStatus
+    ) = abi.decode(data[1], (uint256, bool, uint256, uint256, uint8));
 
-    if (statusI == 0) {
-      if (statusF == 1) {
-        hash = keccak256(abi.encode(commitIdI, isBuyI, collateralI, paymentAmountI, statusF));
-      } else if (statusF == 2) {
-        // c
+    require(ecrecover(keccak256(data[0]), v[0], r[0], s[0]) == msg.sender && ecrecover(keccak256(data[1]), v[1], r[1], s[1]) == msg.sender, "commit must be signed by msg.sender");
+    require(
+      iCommitId == fCommitId
+    , "commit must be for same commit ID");
+    if (iStatus == 0 && fStatus == 1) {
+      // opening bid
+    } else if (iStatus == 1 && fStatus == 2) {
+      // validating bid
+    } else if (iStatus == 2 && fStatus == 3) {
+      // closing bid
+    } else {
+      if (fStatus == 4) {
+        // canceling bid
       }
     }
   }
-
-
 }

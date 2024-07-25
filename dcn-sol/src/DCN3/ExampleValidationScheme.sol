@@ -6,7 +6,7 @@ import { IValidationScheme } from "./IValidationScheme.sol";
 contract ExampleValidationScheme is IValidationScheme {
 
   uint256 chainId;
-  bytes32 DOMAIN_SEPARATOR;
+  bytes32 public DOMAIN_SEPARATOR;
 
   struct ValidationScheme {
     uint256 commitId;
@@ -16,7 +16,7 @@ contract ExampleValidationScheme is IValidationScheme {
   bytes32 VALIDATIONSCHEME_TYPE_HASH = keccak256(VALIDATIONSCHEME_TYPE);
 
   constructor () {
-    uint256ch;
+    uint256 ch;
     assembly {
       ch := chainid()
     }
@@ -37,12 +37,11 @@ contract ExampleValidationScheme is IValidationScheme {
     bytes32 r,
     bytes32 s,
     bytes memory data
-  ) {
+  ) public {
     (uint256 commitId) = abi.decode(data, (uint256));
     bytes32 hash = keccak256(abi.encode(commitId));
 
     require(ecrecover(hash, v, r, s) == msg.sender, "validation must be signed by msg.sender");
-    require(status == 1, "Validation can only happen on status Open");
 
 
   }
