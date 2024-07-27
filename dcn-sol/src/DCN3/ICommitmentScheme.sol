@@ -2,7 +2,7 @@ pragma solidity 0.8.26;
 
 interface ICommitmentScheme {
   function DOMAIN_SEPARATOR() external returns (bytes32);
-  function createCommit(
+  function createStatement(
     uint256 commitId,
     uint8 v,
     bytes32 r,
@@ -11,7 +11,7 @@ interface ICommitmentScheme {
     uint256 latestNonce
   ) external returns (bytes32 hash); 
 
-  function updateCommit(
+  function updateStatement(
     uint256 commitId,
     uint8[2] memory v,
     bytes32[2] memory r,

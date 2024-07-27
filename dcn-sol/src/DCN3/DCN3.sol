@@ -1,6 +1,8 @@
 pragma solidity 0.8.26;
 import { ICommitmentScheme } from "./ICommitmentScheme.sol";
 
+// statements, commitments and validations
+
 contract DCN3 {
 
 	event CommitCreated(
@@ -44,14 +46,14 @@ contract DCN3 {
 
 	constructor() {}
 
-	function createCommit(
-    address commitmentScheme,
+	function createStatement(
+    address statementScheme,
     uint8 v,
     bytes32 r,
     bytes32 s,
     bytes memory data
 	) public payable {
-    (bytes32 hash) = ICommitmentScheme(commitmentScheme).createCommit(
+    (bytes32 hash) = IStatementScheme(commitmentScheme).createCommit(
       commitCount, v, r, s, data, usedNonces[msg.sender]);
     Commit memory commit = Commit({
       v: v,
@@ -69,7 +71,7 @@ contract DCN3 {
       v,
       r,
       s,
-      hash
+      hash,
 		);
 	}
   function updateCommit(

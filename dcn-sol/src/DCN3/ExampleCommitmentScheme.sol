@@ -1,8 +1,14 @@
 pragma solidity 0.8.26;
 import { ICommitmentScheme } from "./ICommitmentScheme.sol";
 
-contract ExampleCommitmentScheme is ICommitmentScheme {
-
+contract ExampleStatementScheme is ICommitmentScheme {
+  -> optional event (
+    bool isBuy,
+    uint256 collateral,
+    uint256 paymentAmount,
+    uint8 status,
+    uint256 nonce
+  )
 	uint256 chainId;
 	bytes32 public DOMAIN_SEPARATOR;
   address dcn;
@@ -12,7 +18,7 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
   // 2 = Validating
   // 3 = Closed
   // 4 = Canceled
-  struct CommitScheme {
+  struct StatementScheme {
     bool isBuy;
     uint256 collateral;
     uint256 paymentAmount;
@@ -68,6 +74,7 @@ contract ExampleCommitmentScheme is ICommitmentScheme {
     require(ecrecover(hash, v, r, s) == msg.sender, "commit must be signed by msg.sender");
     //require(msg.value == collateral, "commit must be for full amount");
     require(status == 0, "commit must be in status Pending");
+    emit (event with data)
   }
 
   function updateCommit(
