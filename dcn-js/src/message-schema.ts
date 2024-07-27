@@ -1,19 +1,19 @@
 interface MessageRequestCredits {
-  type: "request-credits";
+  _tag: "request-credits";
   dealId: string;
   publicKey: string;
   amount: number;
 }
 
 interface MessageOkRequest {
-  type: "ok-request";
+  _tag: "ok-request";
   dealId: string;
   publicKey: string;
   amount: number;
 }
 
 interface MessageOnChainBidSubmitted {
-  type: "bid-submitted";
+  _tag: "bid-submitted";
   dealId: string;
   publicKey: string;
   dealContract: string;
@@ -21,7 +21,7 @@ interface MessageOnChainBidSubmitted {
 }
 
 interface MessageOnChainAskSubmitted {
-  type: "ask-submitted";
+  _tag: "ask-submitted";
   dealId: string;
   publicKey: string;
   dealContract: string;
