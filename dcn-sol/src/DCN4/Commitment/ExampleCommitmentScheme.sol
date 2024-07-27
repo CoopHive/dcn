@@ -5,7 +5,7 @@ import "./IValidation.sol";
 import "./ICommitment.sol";
 
 contract ExampleCommitmentScheme is ICommitment {
-
+  address public collateralValidator;
   struct CommitmentScheme {
     uint256 statementId;
     address validator;
@@ -13,14 +13,27 @@ contract ExampleCommitmentScheme is ICommitment {
     bytes32 r;
     bytes32 s;
     bytes32 hash;
-  }
-  constructor () {
-
+  
+  constructor (address _collateralValidator) {
+    collateralValidator = _collateralValidator;
   }
 
   function createCommitment(
-
+    uint256 statementId,
+    uint8 v,
+    uint256 r,
+    uint256 s,
+    bytes memory validationData
   ) external view returns (bytes32) {
-    return bytes32(0x0);    
+
+    IValidation(collateralValidator).confirmValidation{
+      value: msg.value
+    }(
+      statementId,
+      v,
+      r,
+      s,
+      validationData
+    )
   }
 }

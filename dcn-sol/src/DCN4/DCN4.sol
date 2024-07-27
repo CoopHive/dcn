@@ -61,9 +61,7 @@ contract DCN4 {
     );
   }
 
-  function createValidation(
-
-  )
+  function createValidation() public {}
 
   function createCommit(
     address statementScheme,
@@ -73,7 +71,7 @@ contract DCN4 {
     uint8 v,
     bytes32 r,
     bytes32 s,
-    bytes memory commitData
+    bytes memory validationData
   ) public {
     Statement memory statement = statements[statementScheme][statementId];
     require(statement.hash != 0, "statement not found");
@@ -81,7 +79,9 @@ contract DCN4 {
     ICommitScheme(commitmentScheme).createCommit{
       value: msg.value
     }(
-      
+      statementId,
+      msg.sender,
+      v, r, s, commitData
     )
   }
 
