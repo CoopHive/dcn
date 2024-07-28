@@ -1,7 +1,8 @@
 pragma solidity 0.8.26;
 
-import { IStatementScheme } from "./IStatementScheme.sol";
-import { IValidationScheme } from "./IValidationScheme.sol";
+import { IStatement } from "./Statement/IStatement.sol";
+import { IValidation } from "./Validation/IValidation.sol";
+import { ICommitment } from "./Commitment/ICommitment.sol";
 
 contract DCN4 {
   event StatementCreated(
@@ -11,12 +12,13 @@ contract DCN4 {
     bytes32 r,
     bytes32 s,
     bytes32 hash
-  )
+  );
+
   struct Statement {
-    uint8 v,
-    bytes32 r,
-    bytes32 s,
-    bytes32 hash
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+    bytes32 hash;
   }
   uint256 statementCount;
   // commitscheme 
@@ -28,7 +30,7 @@ contract DCN4 {
     bytes data;
   }
   // statementId => validator address => Commit
-  mapping(address mapping(address => Commit)) public commits;
+  mapping(address => mapping(address => Commit)) public commits;
 
   constructor() {}
 
@@ -39,7 +41,7 @@ contract DCN4 {
     bytes32 s,
     bytes memory data
   ) public payable {
-    (bytes32 hash) = IStatementScheme(statementScheme).createStatement{
+    (bytes32 hash) = IStatement(statementScheme).createStatement{
       value: msg.value
     }(
       statementCount,
@@ -66,7 +68,7 @@ contract DCN4 {
   function createCommit(
     address statementScheme,
     uint256 statementId,
-    bytes memory statementData
+    bytes memory statementData,
     address commitmentScheme,
     uint8 v,
     bytes32 r,
@@ -76,13 +78,11 @@ contract DCN4 {
     Statement memory statement = statements[statementScheme][statementId];
     require(statement.hash != 0, "statement not found");
 
-    ICommitScheme(commitmentScheme).createCommit{
-      value: msg.value
-    }(
+    ICommitment(commitmentScheme).createCommitment(
       statementId,
       msg.sender,
-      v, r, s, commitData
-    )
+      v, r, s, validationData
+    );
   }
 
 

@@ -1,7 +1,6 @@
 pragma solidity 0.8.26;
 
-import "./IStatement.sol";
-import "./IValidation.sol";
+import "../Validation/IValidation.sol";
 import "./ICommitment.sol";
 
 contract ExampleCommitmentScheme is ICommitment {
@@ -13,6 +12,7 @@ contract ExampleCommitmentScheme is ICommitment {
     bytes32 r;
     bytes32 s;
     bytes32 hash;
+  }
   
   constructor (address _collateralValidator) {
     collateralValidator = _collateralValidator;
@@ -20,20 +20,19 @@ contract ExampleCommitmentScheme is ICommitment {
 
   function createCommitment(
     uint256 statementId,
+    address sender,
     uint8 v,
-    uint256 r,
-    uint256 s,
+    bytes32 r,
+    bytes32 s,
     bytes memory validationData
-  ) external view returns (bytes32) {
+  ) public returns (bytes32 hash) {
 
-    IValidation(collateralValidator).confirmValidation{
-      value: msg.value
-    }(
+    hash = IValidation(collateralValidator).confirmValidation(
       statementId,
       v,
       r,
       s,
       validationData
-    )
+    );
   }
 }

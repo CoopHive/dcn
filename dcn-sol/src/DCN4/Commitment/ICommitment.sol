@@ -1,5 +1,12 @@
 pragma solidity 0.8.26;
 
 interface ICommitment {
-  function createCommitment() external view returns (bytes32);
+  function createCommitment(
+    uint256 statementId,
+    address sender,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes memory validationData
+  ) external returns (bytes32 hash);
 }

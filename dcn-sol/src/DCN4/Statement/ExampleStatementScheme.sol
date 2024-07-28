@@ -1,8 +1,9 @@
 pragma solidity 0.8.26;
 
-import { IStatementScheme } from "./IStatementScheme.sol";
+import { IStatement } from "./IStatement.sol";
 
-contract CollateralStatementScheme is IStatementScheme {
+contract ExampleStatementScheme is IStatement {
+
   struct StatementScheme {
     bool isBuy;
     uint256 collateral;
@@ -12,24 +13,12 @@ contract CollateralStatementScheme is IStatementScheme {
     uint256 nonce; 
   }
 
-  function createStatement(
-    uint256 statementId,
-    uint8 v,
-    bytes32 r,
-    bytes32 s,
-    bytes memory data
-  ) public view returns (bytes32) {
-    return bytes32(0);
-  }
-
-  modifier onlyDcn() {
-    require(msg.sender == dcn, "only dcn");
-    _;
-  }
 
   bytes STATEMENTSCHEME_TYPE = "StatementScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status,address[] validators,uint256 nonce)";
 
   bytes32 STATEMENTSCHEME_TYPE_HASH = keccak256(STATEMENTSCHEME_TYPE);
+  bytes32 DOMAIN_SEPARATOR; 
+  address public dcn;
 
   constructor (address _dcn) {
     uint256 ch;
@@ -45,12 +34,12 @@ contract CollateralStatementScheme is IStatementScheme {
         address(this)
     )
     );
-    chainId = ch;
     dcn = _dcn;
   }
 
-  constructor(address _dcn) {
-    dcn = _dcn;
+  modifier onlyDcn() {
+    require(msg.sender == dcn, "only dcn");
+    _;
   }
 
 
@@ -68,7 +57,7 @@ contract CollateralStatementScheme is IStatementScheme {
       uint256 collateral,
       uint256 paymentAmount,
       uint8 status,
-      address[] validators,
+      address[] memory validators,
       uint256 nonce
     ) = abi.decode(data, (bool, uint256, uint256, uint8, address[], uint256));
     hash = keccak256(data);
