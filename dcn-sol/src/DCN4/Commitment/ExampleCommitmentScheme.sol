@@ -25,9 +25,9 @@ contract ExampleCommitmentScheme is ICommitment {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) public returns (bytes32 hash) {
+  ) public returns (bytes32 hash, address validationAgent) {
 
-    hash = IValidation(collateralValidator).confirmValidation(
+    (hash, validationAgent) = IValidation(collateralValidator).confirmValidation(
       statementId,
       v,
       r,

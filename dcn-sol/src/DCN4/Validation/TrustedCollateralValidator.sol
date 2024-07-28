@@ -23,10 +23,10 @@ contract TrustedCollateralValidator is IValidation {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) onlyValidationAgent public returns (bytes32 hash) {
+  ) onlyValidationAgent public returns (bytes32 hash, address validationAgent) {
     hash = keccak256(validationData);
     require(ecrecover(hash, v,r,s) == validationAgent, "validator must sign this");
-    return hash;
+    return (hash, validationAgent);
 
 
   }

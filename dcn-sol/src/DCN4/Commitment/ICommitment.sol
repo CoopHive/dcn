@@ -8,5 +8,5 @@ interface ICommitment {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) external returns (bytes32 hash);
+  ) external returns (bytes32 hash, address validationAgent);
 }

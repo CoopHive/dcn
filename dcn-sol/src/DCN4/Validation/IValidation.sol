@@ -8,5 +8,5 @@ interface IValidation {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) external returns (bytes32);
+  ) external returns (bytes32, address);
 }

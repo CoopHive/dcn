@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 import { IStatement } from "./Statement/IStatement.sol";
 import { IValidation } from "./Validation/IValidation.sol";
 import { ICommitment } from "./Commitment/ICommitment.sol";
+import { IResolver } from "./Resolver/IResolver.sol";
 
 contract DCN4 {
   event StatementCreated(
@@ -25,13 +26,23 @@ contract DCN4 {
   mapping(address => mapping(uint256 => Statement)) public statements;
   mapping (address => uint256) usedNonces;
 
-  struct Commit {
-    bool isAuthorized;
-    bytes data;
+  struct CommitedStatement {
+    uint256 statementId;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+    bytes32 hash;
   }
   // statementId => validator address => Commit
-  mapping(address => mapping(address => Commit)) public commits;
+  mapping(address => mapping(address => Commit)) public commitedStatements;
 
+  struct ResolvedStatement {
+    uint256 statementId;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+    bytes32 hash;
+  }
   constructor() {}
 
   function createStatement(
@@ -63,9 +74,7 @@ contract DCN4 {
     );
   }
 
-  function createValidation() public {}
-
-  function createCommit(
+  function commitStatement(
     address statementScheme,
     uint256 statementId,
     bytes memory statementData,
@@ -78,12 +87,30 @@ contract DCN4 {
     Statement memory statement = statements[statementScheme][statementId];
     require(statement.hash != 0, "statement not found");
 
-    ICommitment(commitmentScheme).createCommitment(
+    (bytes32 hash, address validationAgent) = ICommitment(commitmentScheme).createCommitment(
       statementId,
       msg.sender,
       v, r, s, validationData
     );
+
+    commitments[commitmentScheme][validationAgent] = Commitment(
+      statementId,
+      v,
+      r,
+      s,
+      hash
+    );
   }
 
-
+  function resolveStatement(
+    uint256 commitmentId,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes memory resolveData
+  ) public {
+    Commitment memory commitment = commitments[msg.sender][commitmentId];
+    require(commitment.hash != 0, "commitment not found");
+    I
+    
 }
