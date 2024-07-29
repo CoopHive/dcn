@@ -1,12 +1,13 @@
 pragma solidity 0.8.26;
 
-interface IValidation {
+interface IValidator {
 
-  function confirmValidation(
+  function validateStatement(
     uint256 statementId,
     uint8 v,
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) external returns (bytes32, address);
+  ) returns (bytes32 hash, address validationAgent);
+
 }

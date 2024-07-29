@@ -1,12 +1,14 @@
 pragma solidity 0.8.26;
-import {IValidation} from "./IValidation.sol";
-contract TrustedCollateralValidator is IValidation {
-
+import "../IValidator.sol";
+contract TrustedUptimeValidator is IValidator {
   address validationAgent;
+
   struct ValidationScheme {
     uint256 statementId;
     bool hasCollateral;
   }
+
+
 
   constructor(address _validationAgent) {
     validationAgent = _validationAgent;
@@ -17,7 +19,7 @@ contract TrustedCollateralValidator is IValidation {
     _;
   }
 
-  function confirmValidation(
+  function validateStatement(
     uint256 statementId,
     uint8 v,
     bytes32 r,
@@ -27,7 +29,6 @@ contract TrustedCollateralValidator is IValidation {
     hash = keccak256(validationData);
     require(ecrecover(hash, v,r,s) == validationAgent, "validator must sign this");
     return (hash, validationAgent);
-
 
   }
 }

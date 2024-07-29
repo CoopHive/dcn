@@ -9,10 +9,9 @@ contract ExampleStatementScheme is IStatement {
     uint256 collateral;
     uint256 paymentAmount;
     uint8 status;
-    address[] validators;
+    address baseValidator;
     uint256 nonce; 
   }
-
 
   bytes STATEMENTSCHEME_TYPE = "StatementScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status,address[] validators,uint256 nonce)";
 
@@ -68,6 +67,26 @@ contract ExampleStatementScheme is IStatement {
     return keccak256(data);
   }
 
+  /* specific logic to matching */
 
+  function validateStatement(
+    uint256 statementId,
+    address baseValidator,
+    uint8 v
+    bytes32 r,
+    bytes32 s,
+    bytes32 hash
+  ) onlyDcn public {
 
+  } 
+
+  function matchStatements(
+    uint256[2] memory statementIds,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes memory data
+  ) onlyDcn public {
+
+  }
 }

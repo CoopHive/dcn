@@ -6,6 +6,7 @@ import { ICommitment } from "./Commitment/ICommitment.sol";
 import { IResolver } from "./Resolver/IResolver.sol";
 
 contract DCN4 {
+
   event StatementCreated(
     uint256 indexed statementId,
     address indexed stater,
@@ -21,28 +22,25 @@ contract DCN4 {
     bytes32 s;
     bytes32 hash;
   }
+
   uint256 statementCount;
-  // commitscheme 
-  mapping(address => mapping(uint256 => Statement)) public statements;
+  // statementscheme => statementId => Statement 
+  mapping (address => mapping(uint256 => Statement)) public statements;
   mapping (address => uint256) usedNonces;
 
-  struct CommitedStatement {
+  struct ValidatedStatement {
     uint256 statementId;
-    uint8 v;
+    uint8 v; // validator signature params
     bytes32 r;
     bytes32 s;
-    bytes32 hash;
+    bytes32 hash; //from validator
   }
-  // statementId => validator address => Commit
-  mapping(address => mapping(address => Commit)) public commitedStatements;
+  // statementscheme => statementId => validationOfStatement
+  mapping (address => mapping(uint256 => ValidatedStatement)) public validatedStatements;
+  mapping(address => mapping(address => CommitedStatement)) public commitedStatements;
 
-  struct ResolvedStatement {
-    uint256 statementId;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bytes32 hash;
-  }
+
+
   constructor() {}
 
   function createStatement(
@@ -74,26 +72,16 @@ contract DCN4 {
     );
   }
 
-  function commitStatement(
-    address statementScheme,
+  function validateStatement(
     uint256 statementId,
-    bytes memory statementData,
-    address commitmentScheme,
-    uint8 v,
+    address baseValidator,
+    uint8 v
     bytes32 r,
     bytes32 s,
-    bytes memory validationData
-  ) public {
-    Statement memory statement = statements[statementScheme][statementId];
-    require(statement.hash != 0, "statement not found");
+    bytes32 hash
+  ) public payable {
 
-    (bytes32 hash, address validationAgent) = ICommitment(commitmentScheme).createCommitment(
-      statementId,
-      msg.sender,
-      v, r, s, validationData
-    );
-
-    commitments[commitmentScheme][validationAgent] = Commitment(
+    IValidation(baseValidator).confirmValidation(
       statementId,
       v,
       r,
@@ -102,15 +90,16 @@ contract DCN4 {
     );
   }
 
-  function resolveStatement(
-    uint256 commitmentId,
+  function matchStatements(
+    uint256[2] memory statementIds,
     uint8 v,
     bytes32 r,
     bytes32 s,
-    bytes memory resolveData
-  ) public {
-    Commitment memory commitment = commitments[msg.sender][commitmentId];
-    require(commitment.hash != 0, "commitment not found");
-    I
-    
+    bytes memory data
+  ) public payable return (hash bytes32) {
+
+    // check for existence of statements
+    // check if they are validated
+    // execute match logic
+  }
 }
