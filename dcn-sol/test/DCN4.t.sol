@@ -73,8 +73,6 @@ contract DCN4Test is Test {
   function testCreateStatement() public {
     vm.startPrank(demander.addr);
     {
-      bytes memory STATEMENTSCHEME_TYPE = "CommitScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status)";
-      bytes32 STATEMENTSCHEME_TYPE_HASH = keccak256(STATEMENTSCHEME_TYPE);
       ExampleStatementScheme.StatementScheme memory statement = ExampleStatementScheme.StatementScheme({
         isBuy: true,
         collateral: 100,
@@ -85,11 +83,12 @@ contract DCN4Test is Test {
       });  
       bytes32 structHash = keccak256(
         abi.encode(
-          STATEMENTSCHEME_TYPE_HASH,
+          exampleStatementScheme.STATEMENTSCHEME_TYPE_HASH(),
           statement.isBuy,
           statement.collateral,
           statement.paymentAmount,
           statement.status,
+          statement.baseValidator,
           statement.nonce
         )
       );
@@ -102,12 +101,16 @@ contract DCN4Test is Test {
       );
 
       (uint8 v, bytes32 r, bytes32 s) = vm.sign(demander.privateKey, digest);
-
-      dcn4.createStatement(address(exampleStatementScheme), v, r, s, abi.encode(
+      console.log('v', v);
+      console.logBytes32(r);
+      console.logBytes32(s);
+      vm.deal(demander.addr, 1 ether);
+      dcn4.createStatement{value: statement.collateral}(address(exampleStatementScheme), v, r, s, abi.encode(
         statement.isBuy,
         statement.collateral,
         statement.paymentAmount,
         statement.status,
+        statement.baseValidator,
         statement.nonce
       ));
 
