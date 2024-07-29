@@ -1,5 +1,5 @@
 pragma solidity 0.8.26;
-import "../IValidator.sol";
+import "./IValidator.sol";
 
 contract TrustedReplicationValidator is IValidator {
   address validationAgent;
@@ -11,8 +11,8 @@ contract TrustedReplicationValidator is IValidator {
 
 
 
-  constructor(address _validationAgent) {
-    validationAgent = _validationAgent;
+  constructor() {
+    validationAgent = msg.sender;
   }
 
   modifier onlyValidationAgent() {
@@ -26,10 +26,9 @@ contract TrustedReplicationValidator is IValidator {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) onlyValidationAgent public returns (bytes32 hash, address validationAgent) {
+  ) onlyValidationAgent public returns (bytes32 hash ) {
     hash = keccak256(validationData);
     require(ecrecover(hash, v,r,s) == validationAgent, "validator must sign this");
-    return (hash, validationAgent);
 
   }
 }

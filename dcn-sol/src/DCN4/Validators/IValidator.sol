@@ -8,6 +8,6 @@ interface IValidator {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) returns (bytes32 hash, address validationAgent);
+  ) external returns (bytes32 hash);
 
 }

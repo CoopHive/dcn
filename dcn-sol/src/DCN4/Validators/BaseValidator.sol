@@ -1,7 +1,11 @@
 pragma solidity 0.8.26;
-import "../IValidator.sol";
+import "./IValidator.sol";
 contract BaseValidator is IValidator {
   address validationAgent;
+  
+  address collateralValidator;
+  address uptimeValidator;
+  address replicationValidator;
 
   struct ValidationScheme {
     uint256 statementId;
@@ -10,8 +14,16 @@ contract BaseValidator is IValidator {
 
 
 
-  constructor(address _validationAgent) {
-    validationAgent = _validationAgent;
+  constructor(
+    address _collateralValidator,
+    address _uptimeValidator,
+    address _replicationValidator
+  ) {
+    validationAgent = msg.sender;
+
+    collateralValidator = _collateralValidator;
+    uptimeValidator = _uptimeValidator;
+    replicationValidator = _replicationValidator;
   }
 
   modifier onlyValidationAgent() {
@@ -25,10 +37,9 @@ contract BaseValidator is IValidator {
     bytes32 r,
     bytes32 s,
     bytes memory validationData
-  ) onlyValidationAgent public returns (bytes32 hash, address validationAgent) {
+  ) onlyValidationAgent public returns (bytes32 hash) {
     hash = keccak256(validationData);
     require(ecrecover(hash, v,r,s) == validationAgent, "validator must sign this");
-    return (hash, validationAgent);
 
   }
 }

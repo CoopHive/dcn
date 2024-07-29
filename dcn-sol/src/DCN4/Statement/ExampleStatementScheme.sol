@@ -13,10 +13,10 @@ contract ExampleStatementScheme is IStatement {
     uint256 nonce; 
   }
 
-  bytes STATEMENTSCHEME_TYPE = "StatementScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status,address[] validators,uint256 nonce)";
+  bytes public STATEMENTSCHEME_TYPE = "StatementScheme(bool isBuy,uint256 collateral,uint256 paymentAmount,uint8 status,address[] validators,uint256 nonce)";
 
-  bytes32 STATEMENTSCHEME_TYPE_HASH = keccak256(STATEMENTSCHEME_TYPE);
-  bytes32 DOMAIN_SEPARATOR; 
+  bytes32 public STATEMENTSCHEME_TYPE_HASH = keccak256(STATEMENTSCHEME_TYPE);
+  bytes32 public DOMAIN_SEPARATOR; 
   address public dcn;
 
   constructor (address _dcn) {
@@ -72,11 +72,11 @@ contract ExampleStatementScheme is IStatement {
   function validateStatement(
     uint256 statementId,
     address baseValidator,
-    uint8 v
+    uint8 v,
     bytes32 r,
     bytes32 s,
-    bytes32 hash
-  ) onlyDcn public {
+    bytes  memory data
+  ) onlyDcn public payable returns (bytes32) {
 
   } 
 

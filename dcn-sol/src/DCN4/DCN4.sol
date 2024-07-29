@@ -1,9 +1,7 @@
 pragma solidity 0.8.26;
 
 import { IStatement } from "./Statement/IStatement.sol";
-import { IValidation } from "./Validation/IValidation.sol";
-import { ICommitment } from "./Commitment/ICommitment.sol";
-import { IResolver } from "./Resolver/IResolver.sol";
+import { IValidator } from "./Validators/IValidator.sol";
 
 contract DCN4 {
 
@@ -24,9 +22,9 @@ contract DCN4 {
   }
 
   uint256 statementCount;
-  // statementscheme => statementId => Statement 
+    // statementscheme => statementId => Statement 
   mapping (address => mapping(uint256 => Statement)) public statements;
-  mapping (address => uint256) usedNonces;
+  mapping (address => uint256) public usedNonces;
 
   struct ValidatedStatement {
     uint256 statementId;
@@ -37,7 +35,6 @@ contract DCN4 {
   }
   // statementscheme => statementId => validationOfStatement
   mapping (address => mapping(uint256 => ValidatedStatement)) public validatedStatements;
-  mapping(address => mapping(address => CommitedStatement)) public commitedStatements;
 
 
 
@@ -75,18 +72,18 @@ contract DCN4 {
   function validateStatement(
     uint256 statementId,
     address baseValidator,
-    uint8 v
+    uint8 v,
     bytes32 r,
     bytes32 s,
-    bytes32 hash
+    bytes memory data
   ) public payable {
 
-    IValidation(baseValidator).confirmValidation(
+    IValidator(baseValidator).validateStatement(
       statementId,
       v,
       r,
       s,
-      hash
+      data
     );
   }
 
@@ -96,7 +93,7 @@ contract DCN4 {
     bytes32 r,
     bytes32 s,
     bytes memory data
-  ) public payable return (hash bytes32) {
+  ) public payable returns (bytes32) {
 
     // check for existence of statements
     // check if they are validated
