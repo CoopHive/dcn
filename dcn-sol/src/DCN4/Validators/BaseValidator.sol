@@ -12,8 +12,6 @@ contract BaseValidator is IValidator {
     bool hasCollateral;
   }
 
-
-
   constructor(
     address _collateralValidator,
     address _uptimeValidator,

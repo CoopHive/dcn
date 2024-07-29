@@ -23,7 +23,7 @@ contract DCN4Test is Test {
 
   Vm.Wallet public demander;
   Vm.Wallet public supplier;
-  
+
   Vm.Wallet public collateralValidator;
   Vm.Wallet public uptimeValidator;
   Vm.Wallet public replicationValidator;
@@ -41,7 +41,7 @@ contract DCN4Test is Test {
     collateralValidator = vm.createWallet(vm.deriveKey(mnemonic, 4));
     uptimeValidator = vm.createWallet(vm.deriveKey(mnemonic, 5));
     replicationValidator = vm.createWallet(vm.deriveKey(mnemonic, 6));
-    
+
     baseValidator = vm.createWallet(vm.deriveKey(mnemonic, 7));
 
     {
@@ -53,7 +53,7 @@ contract DCN4Test is Test {
 
       vm.prank(collateralValidator.addr);
       trustedCollateralValidator = new TrustedCollateralValidator();
-      
+
       vm.prank(uptimeValidator.addr);
       trustedUptimeValidator = new TrustedUptimeValidator();
 
@@ -70,7 +70,7 @@ contract DCN4Test is Test {
     }
   }
 
-  function testCreateStatement() public {
+  function prepareStatement() public {
     vm.startPrank(demander.addr);
     {
       ExampleStatementScheme.StatementScheme memory statement = ExampleStatementScheme.StatementScheme({
@@ -80,30 +80,31 @@ contract DCN4Test is Test {
         status: 0,
         baseValidator: address(trustedBaseValidator),
         nonce: dcn4.usedNonces(demander.addr) + 1
-      });  
-      bytes32 structHash = keccak256(
-        abi.encode(
-          exampleStatementScheme.STATEMENTSCHEME_TYPE_HASH(),
-          statement.isBuy,
-          statement.collateral,
-          statement.paymentAmount,
-          statement.status,
-          statement.baseValidator,
-          statement.nonce
-        )
-      );
-      bytes32 digest = keccak256(
-        abi.encodePacked(
-          "\x19\x01",
-          exampleStatementScheme.DOMAIN_SEPARATOR(),
-          structHash
-        )
-      );
+      });
+      uint8 v;
+      bytes32 r;
+      bytes32 s;
+      {
+        bytes32 structHash = keccak256(
+          abi.encode(
+            exampleStatementScheme.STATEMENTSCHEME_TYPE_HASH(),
+            statement.isBuy,
+            statement.collateral,
+            statement.paymentAmount,
+            statement.status,
+            statement.baseValidator,
+            statement.nonce
+        ));
+        ( v,  r,  s) = vm.sign(
+          demander.privateKey, 
+          keccak256(abi.encodePacked(
+            "\x19\x01",
+            exampleStatementScheme.DOMAIN_SEPARATOR(),
+            structHash
+          ))
+        );
+      }
 
-      (uint8 v, bytes32 r, bytes32 s) = vm.sign(demander.privateKey, digest);
-      console.log('v', v);
-      console.logBytes32(r);
-      console.logBytes32(s);
       vm.deal(demander.addr, 1 ether);
       dcn4.createStatement{value: statement.collateral}(address(exampleStatementScheme), v, r, s, abi.encode(
         statement.isBuy,
@@ -113,12 +114,21 @@ contract DCN4Test is Test {
         statement.baseValidator,
         statement.nonce
       ));
-
-      
     }
+
+  }
+  function testCreateStatement() public {
+    prepareStatement();
+
   }
 
-  function testStartValidation() public {}
+  function testValidateCollateral() public {
+
+  }
+  function testValidateUptime() public {}
+  function testValidateReplication() public {}
+
+  function testValidateStatement() public {}
 
   function testCollectCollateral() public {}
 
