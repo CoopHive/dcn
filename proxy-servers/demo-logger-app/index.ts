@@ -13,6 +13,6 @@ app.use("*", async (c) => {
 });
 
 export default {
-  port: 3200,
+  port: 3000,
   fetch: app.fetch,
 };

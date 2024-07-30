@@ -1,10 +1,16 @@
+import express from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { Kysely, PostgresDialect } from "kysely";
 import { type DB } from "kysely-codegen";
 import { Pool } from "pg";
-import { createPublicClient, http } from "viem";
+import {
+  createPublicClient,
+  encodeAbiParameters,
+  http,
+  parseAbiParameters,
+  recoverMessageAddress,
+} from "viem";
 import { anvil } from "viem/chains";
-import express from "express";
-import { createProxyMiddleware } from "http-proxy-middleware";
 
 const client = createPublicClient({
   chain: anvil,
@@ -23,20 +29,47 @@ const db = new Kysely<DB>({
 const app = express();
 
 // The target URL where we want to forward requests
-const TARGET_URL = "http://localhost:3200";
+const TARGET_URL = "http://localhost:3000";
+
+function isHex(s: unknown): asserts s is `0x${string}` {
+  if (typeof s !== "string" || !s.startsWith("0x")) {
+    throw new Error("Expected hex string");
+  }
+}
 
 const proxyMiddleware = createProxyMiddleware({
   target: TARGET_URL,
   changeOrigin: true,
   on: {
-    proxyReq: async (proxyReq) => {
-      const hiveAuth = proxyReq.getHeader("X-Hive-Signature");
-      console.log("Hive Signature: ", hiveAuth);
-      proxyReq.removeHeader("X-Hive-Signature");
+    proxyReq: async (proxyReq, req) => {
+      console.log("req received");
+      const signature = req.headers["x-hive-signature"];
+      const nonce = req.headers["x-hive-nonce"];
+
+      try {
+        isHex(signature);
+      } catch (e) {
+        console.error("Invalid signature: ", signature, e);
+        return;
+      }
+      if (typeof nonce !== "string") {
+        console.error("Invalid nonce: ", nonce);
+        return;
+      }
+
+      const address = await recoverMessageAddress({
+        message: nonce,
+        signature,
+      });
+
+      proxyReq.removeHeader("x-hive-signature");
+      proxyReq.removeHeader("x-hive-nonce");
+
+      console.log("Recovered address: ", address);
     },
   },
 });
 
-app.use("*", proxyMiddleware);
+app.use(proxyMiddleware);
 
-app.listen(3100);
+app.listen(3200);
