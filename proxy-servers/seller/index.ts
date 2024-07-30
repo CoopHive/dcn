@@ -61,15 +61,43 @@ const proxyMiddleware = createProxyMiddleware({
         message: nonce,
         signature,
       });
+      console.log("Recovered address: ", address);
+
+      if (!isAuthorized(address)) {
+        console.error("Unauthorized address: ", address);
+        return;
+      }
 
       proxyReq.removeHeader("x-hive-signature");
       proxyReq.removeHeader("x-hive-nonce");
-
-      console.log("Recovered address: ", address);
     },
   },
 });
 
-app.use(proxyMiddleware);
+const isAuthorized = async (address: string): Promise<boolean> => {
+  try {
+    const credits =
+      (
+        await db
+          .selectFrom("credits")
+          .select("credits")
+          .where("public_key", "=", address)
+          .executeTakeFirst()
+      )?.credits ?? 0;
 
+    if (credits > 0) {
+      await db
+        .updateTable("credits")
+        .set((eb) => ({ credits: eb("credits", "-", 1) }))
+        .where("public_key", "=", address)
+        .executeTakeFirst();
+
+      return true;
+    }
+  } finally {
+    return false;
+  }
+};
+
+app.use(proxyMiddleware);
 app.listen(3200);
