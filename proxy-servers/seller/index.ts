@@ -48,7 +48,7 @@ const isAuthorized = async (address: string): Promise<boolean> => {
         .updateTable("credits")
         .set((eb) => ({ credits: eb("credits", "-", 1) }))
         .where("public_key", "=", address)
-        .executeTakeFirst();
+        .executeTakeFirstOrThrow();
 
       return true;
     }
