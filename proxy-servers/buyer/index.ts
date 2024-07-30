@@ -1,14 +1,9 @@
 import express from "express";
-import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
-import {
-  createWalletClient,
-  encodeAbiParameters,
-  http,
-  parseAbiParameters,
-} from "viem";
+import { createProxyMiddleware } from "http-proxy-middleware";
+import { v4 as uuidv4 } from "uuid";
+import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { anvil } from "viem/chains";
-import { v4 as uuidv4 } from "uuid";
 
 declare global {
   namespace Express {

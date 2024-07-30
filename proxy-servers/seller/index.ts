@@ -3,13 +3,7 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import { Kysely, PostgresDialect } from "kysely";
 import { type DB } from "kysely-codegen";
 import { Pool } from "pg";
-import {
-  createPublicClient,
-  encodeAbiParameters,
-  http,
-  parseAbiParameters,
-  recoverMessageAddress,
-} from "viem";
+import { createPublicClient, http, recoverMessageAddress } from "viem";
 import { anvil } from "viem/chains";
 
 const client = createPublicClient({
