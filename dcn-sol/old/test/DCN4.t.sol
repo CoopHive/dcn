@@ -130,6 +130,8 @@ contract DCN4Test is Test {
 
   function testValidateStatement() public {}
 
+  function testMatchStatements() public {}
+
   function testCollectCollateral() public {}
 
 }

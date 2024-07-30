@@ -9,7 +9,7 @@ contract ExampleStatementScheme is IStatement {
     uint256 collateral;
     uint256 paymentAmount;
     uint8 status;
-    address baseValidator;
+    address indexed baseValidator;
     uint256 nonce; 
   }
 

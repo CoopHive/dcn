@@ -1,0 +1,3 @@
+[submodule "dcn-sol/lib/eas-contracts"]
+	path = dcn-sol/lib/eas-contracts
+	url = https://github.com/ethereum-attestation-service/eas-contracts
