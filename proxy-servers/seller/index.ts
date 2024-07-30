@@ -3,13 +3,7 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import { Kysely, PostgresDialect } from "kysely";
 import { type DB } from "kysely-codegen";
 import { Pool } from "pg";
-import { createPublicClient, http, recoverMessageAddress } from "viem";
-import { anvil } from "viem/chains";
-
-const client = createPublicClient({
-  chain: anvil,
-  transport: http(),
-});
+import { recoverMessageAddress } from "viem";
 
 const db = new Kysely<DB>({
   dialect: new PostgresDialect({
@@ -38,40 +32,6 @@ function isHex(s: unknown): asserts s is `0x${string}` {
   }
 }
 
-const proxyMiddleware = createProxyMiddleware({
-  target: TARGET_URL,
-  changeOrigin: true,
-  on: {
-    proxyReq: async (proxyReq, req) => {
-      console.log("req received");
-      const signature = req.headers["x-hive-signature"];
-      const nonce = req.headers["x-hive-nonce"];
-
-      try {
-        isHex(signature);
-        isString(nonce);
-      } catch (e) {
-        console.error("Invalid signature or nonce: ", e);
-        return;
-      }
-
-      const address = await recoverMessageAddress({
-        message: nonce,
-        signature,
-      });
-      console.log("Recovered address: ", address);
-
-      if (!isAuthorized(address)) {
-        console.error("Unauthorized address: ", address);
-        return;
-      }
-
-      proxyReq.removeHeader("x-hive-signature");
-      proxyReq.removeHeader("x-hive-nonce");
-    },
-  },
-});
-
 const isAuthorized = async (address: string): Promise<boolean> => {
   try {
     const credits =
@@ -97,5 +57,40 @@ const isAuthorized = async (address: string): Promise<boolean> => {
   }
 };
 
-app.use(proxyMiddleware);
+const proxyMiddleware = createProxyMiddleware({
+  target: TARGET_URL,
+  changeOrigin: true,
+  on: {
+    proxyReq: (proxyReq) => {
+      proxyReq.removeHeader("x-hive-signature");
+      proxyReq.removeHeader("x-hive-nonce");
+    },
+  },
+});
+
+app.use(async (req, res, next) => {
+  console.log("req received");
+  const signature = req.headers["x-hive-signature"];
+  const nonce = req.headers["x-hive-nonce"];
+
+  try {
+    isHex(signature);
+    isString(nonce);
+  } catch (e) {
+    console.error("Invalid signature or nonce: ", e);
+    return;
+  }
+
+  const address = await recoverMessageAddress({
+    message: nonce,
+    signature,
+  });
+  console.log("Recovered address: ", address);
+
+  if (!isAuthorized(address)) {
+    console.error("Unauthorized address: ", address);
+    return;
+  }
+  next();
+}, proxyMiddleware);
 app.listen(3200);
