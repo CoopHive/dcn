@@ -25,9 +25,16 @@ const app = express();
 // The target URL where we want to forward requests
 const TARGET_URL = "http://localhost:3000";
 
+function isString(s: unknown): asserts s is string {
+  if (typeof s !== "string") {
+    throw new Error(`${s} is not a string`);
+  }
+}
+
 function isHex(s: unknown): asserts s is `0x${string}` {
-  if (typeof s !== "string" || !s.startsWith("0x")) {
-    throw new Error("Expected hex string");
+  isString(s);
+  if (!s.startsWith("0x")) {
+    throw new Error(`${s} is not a hex string`);
   }
 }
 
@@ -42,12 +49,9 @@ const proxyMiddleware = createProxyMiddleware({
 
       try {
         isHex(signature);
+        isString(nonce);
       } catch (e) {
-        console.error("Invalid signature: ", signature, e);
-        return;
-      }
-      if (typeof nonce !== "string") {
-        console.error("Invalid nonce: ", nonce);
+        console.error("Invalid signature or nonce: ", e);
         return;
       }
 
