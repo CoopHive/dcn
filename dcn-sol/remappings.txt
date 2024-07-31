@@ -1,3 +1,2 @@
-remappings = [
- "@ethereum-attestation-service/eas-contracts"="lib/eas-contracts/contracts" 
-]
+@ethereum-attestation-service/eas-contracts=lib/eas-contracts/contracts
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/

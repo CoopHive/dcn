@@ -16,22 +16,12 @@ contract TokenResolver is SchemaResolver {
 
     error InvalidAllowance();
 
-    IERC20 private immutable _targetToken;
-    uint256 private immutable _targetAmount;
-
-    constructor(IEAS eas, IERC20 targetToken, uint256 targetAmount) SchemaResolver(eas) {
-        _targetToken = targetToken;
-        _targetAmount = targetAmount;
+    constructor(IEAS eas) SchemaResolver(eas) {
     }
 
     function onAttest(Attestation calldata attestation, uint256 /*value*/) internal view override returns (bool) {
-        if (_targetToken.allowance(attestation.attester, address(this)) < _targetAmount) {
-            revert InvalidAllowance();
-        }
-        return true;
     }
 
     function onRevoke(Attestation calldata /*attestation*/, uint256 /*value*/) internal pure override returns (bool) {
-        return true;
     }
 }
