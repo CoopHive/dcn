@@ -11,7 +11,7 @@ import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/I
 
 /// @title TokenResolver
 /// @notice A sample schema resolver that checks whether a specific amount of tokens was approved to be included in an attestation.
-contract TokenResolver is SchemaResolver {
+contract CollateralResolver is SchemaResolver {
     //using SafeERC20 for IERC20;
 
     error InvalidAllowance();
