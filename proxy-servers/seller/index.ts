@@ -3,36 +3,17 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import { Kysely, PostgresDialect } from "kysely";
 import { type DB } from "kysely-codegen";
 import { Pool } from "pg";
-import { recoverMessageAddress } from "viem";
+import {
+  encodeAbiParameters,
+  parseAbiParameters,
+  recoverMessageAddress,
+} from "viem";
 
-const db = new Kysely<DB>({
-  dialect: new PostgresDialect({
-    pool: new Pool({
-      database: "dvd_credits",
-      host: "localhost",
-    }),
-  }),
-});
-
-const app = express();
-
-// The target URL where we want to forward requests
-const TARGET_URL = "http://localhost:3000";
-
-function isString(s: unknown): asserts s is string {
-  if (typeof s !== "string") {
-    throw new Error(`${s} is not a string`);
-  }
-}
-
-function isHex(s: unknown): asserts s is `0x${string}` {
-  isString(s);
-  if (!s.startsWith("0x")) {
-    throw new Error(`${s} is not a hex string`);
-  }
-}
-
-const isAuthorized = async (address: string): Promise<boolean> => {
+// auth function; edit as needed
+const sampleIsAuthorized = async (
+  address: string,
+  db: Kysely<DB>
+): Promise<boolean> => {
   try {
     const credits =
       (
@@ -57,40 +38,108 @@ const isAuthorized = async (address: string): Promise<boolean> => {
   }
 };
 
-const proxyMiddleware = createProxyMiddleware({
-  target: TARGET_URL,
-  changeOrigin: true,
-  on: {
-    proxyReq: (proxyReq) => {
-      proxyReq.removeHeader("x-hive-signature");
-      proxyReq.removeHeader("x-hive-nonce");
-    },
-  },
-});
-
-app.use(async (req, res, next) => {
-  console.log("req received");
-  const signature = req.headers["x-hive-signature"];
-  const nonce = req.headers["x-hive-nonce"];
-
-  try {
-    isHex(signature);
-    isString(nonce);
-  } catch (e) {
-    console.error("Invalid signature or nonce: ", e);
-    return;
+// utils
+function isString(s: unknown): asserts s is string {
+  if (typeof s !== "string") {
+    throw new Error(`${s} is not a string`);
   }
+}
 
-  const address = await recoverMessageAddress({
-    message: nonce,
-    signature,
+function isHex(s: unknown): asserts s is `0x${string}` {
+  isString(s);
+  if (!s.startsWith("0x")) {
+    throw new Error(`${s} is not a hex string`);
+  }
+}
+
+function isIntString(s: unknown): asserts s is string {
+  if (typeof s != "string" || !/^\d+$/.test(s)) {
+    throw new Error(`${s} is not an integer string`);
+  }
+}
+
+function startProxyServer(settings: {
+  creditsDb: {
+    name: string;
+    host: string;
+  };
+  targetUrl: string;
+  port: number;
+  isAuthorized: (address: string, db: Kysely<DB>) => Promise<boolean>;
+}) {
+  const db = new Kysely<DB>({
+    dialect: new PostgresDialect({
+      pool: new Pool({
+        database: "dvd_credits",
+        host: "localhost",
+      }),
+    }),
   });
-  console.log("Recovered address: ", address);
 
-  if (!isAuthorized(address)) {
-    console.error("Unauthorized address: ", address);
-    return;
-  }
-  next();
-}, proxyMiddleware);
-app.listen(3200);
+  const proxyMiddleware = createProxyMiddleware({
+    target: settings.targetUrl,
+    changeOrigin: true,
+    on: {
+      proxyReq: (proxyReq) => {
+        proxyReq.removeHeader("x-hive-signature");
+        proxyReq.removeHeader("x-hive-timestamp");
+        proxyReq.removeHeader("x-hive-timeout");
+        proxyReq.removeHeader("x-hive-nonce");
+      },
+    },
+  });
+
+  const app = express();
+
+  app.use(async (req, res, next) => {
+    console.log("req received");
+    const signature = req.headers["x-hive-signature"];
+    const timestampRaw = req.headers["x-hive-timestamp"];
+    const timeoutRaw = req.headers["x-hive-timeout"];
+    const nonce = req.headers["x-hive-nonce"];
+
+    try {
+      isHex(signature);
+      isIntString(timestampRaw);
+      isIntString(timeoutRaw);
+      isString(nonce);
+    } catch (e) {
+      console.error("Invalid signature or nonce: ", e);
+      return;
+    }
+
+    const timestamp = parseInt(timestampRaw);
+    const timeout = parseInt(timeoutRaw);
+
+    if (Date.now() - timestamp > timeout) {
+      console.error("Request timeout");
+      return;
+    }
+
+    const address = await recoverMessageAddress({
+      message: encodeAbiParameters(
+        parseAbiParameters("uint timestamp, uint timeout, string uuid"),
+        [BigInt(timestamp), BigInt(timeout), nonce]
+      ),
+      signature,
+    });
+    console.log("Recovered address: ", address);
+
+    if (!settings.isAuthorized(address, db)) {
+      console.error("Unauthorized address: ", address);
+      return;
+    }
+    next();
+  }, proxyMiddleware);
+  app.listen(settings.port);
+}
+
+startProxyServer({
+  creditsDb: {
+    name: "dvd_credits",
+    host: "localhost",
+  },
+  targetUrl: "http://localhost:3000",
+  port: 3200,
+  isAuthorized: sampleIsAuthorized,
+});
