@@ -25,7 +25,8 @@ contract CollateralResolver is SchemaResolver {
         return true;
     }
 
-    function onAttest(Attestation calldata attestation, uint256 value) internal view override returns (bool) {
+    function onAttest(Attestation calldata attestation, uint256 value) internal  override returns (bool) {
+      console.log("here 2");
       (
         uint8 action,
         uint256 collateral,
@@ -33,9 +34,64 @@ contract CollateralResolver is SchemaResolver {
       ) = abi.decode(
         attestation.data,
         (uint8, uint256, uint256));
-      return (collateral + paymentAmount == value);
+
+        // Creating Statement
+        if (action == 0 ) {
+          return (collateral + paymentAmount == value);
+        }
+        // matching a statement
+        if (action == 1) {
+          Attestation memory counterPartyAttestation = _eas.getAttestation(
+            attestation.refUID
+          );
+          (
+            , 
+            uint256 collateral,
+            uint256 counterPaymentAmount  
+          ) = abi.decode(
+            counterPartyAttestation.data,
+            (uint8, uint256, uint256)
+          );
+          payable(counterPartyAttestation.recipient).transfer(
+            counterPaymentAmount
+          );
+          return true;
+        }
+
+        if (action == 2) {
+          console.log("Matching statement");
+          console.logBytes32(attestation.refUID);
+          Attestation memory supplierAttestation = _eas.getAttestation(
+            attestation.refUID
+          );
+          (
+            , 
+            uint256 supplierCollateral,
+          ) = abi.decode(
+            supplierAttestation.data,
+            (uint8, uint256, uint256)
+          );
+          payable(supplierAttestation.recipient).transfer(
+            supplierCollateral
+          );
+          Attestation memory demanderAttestation = _eas.getAttestation(
+            supplierAttestation.refUID
+          );
+          (
+            ,
+            uint256 demanderCollateral,
+          ) = abi.decode(
+            demanderAttestation.data,
+            (uint8, uint256, uint256)
+          );
+          payable(demanderAttestation.recipient).transfer(
+            demanderCollateral
+          );
+          return true;
+        }
     }
 
     function onRevoke(Attestation calldata /*attestation*/, uint256 /*value*/) internal pure override returns (bool) {
     }
+
 }

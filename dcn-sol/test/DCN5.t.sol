@@ -63,19 +63,18 @@ contract DCN5Test is Test {
 
   function prepareAttestStatement(
     bytes32 schemaUid,
+    address recipient,
     bytes32 refUID,
-    uint8 action,
-    uint256 purchasePrice,
-    uint256 collateral
+    bytes memory data,
+    uint256 value
   ) public returns (bytes32 attestUid) {
-
     AttestationRequestData memory requestData = AttestationRequestData({
-      recipient: address(dcn),
+      recipient: recipient,
       expirationTime: 0,
       revocable: true,
       refUID: refUID,
-      data: abi.encode(action, purchasePrice, collateral),
-      value: purchasePrice + collateral
+      data: data,
+      value: value
     });
     AttestationRequest memory request = AttestationRequest({
       schema: schemaUid,
@@ -83,41 +82,90 @@ contract DCN5Test is Test {
     });
     attestUid = eas.attest{value:100 wei}(request); 
     
-    console.logBytes32(attestUid);
   }
 
 
   function _testRegisterSchema() public {
     bytes32 uid = prepareSchema();
-    console.logBytes32(uid);
   }
 
 
   function testAttestStatement() public {
     bytes32 uid = prepareSchema();
-    console.logBytes32(uid);
 
     vm.deal(demander.addr, 100 wei);
-    vm.prank(demander.addr);
-    bytes32 attestUid = prepareAttestStatement(uid, "", 0, 50 wei, 50 wei);
-    console.logBytes32(attestUid);
+    vm.startPrank(demander.addr);
+    bytes32 attestUid = prepareAttestStatement(
+      uid,
+      demander.addr,
+      "",
+      abi.encode(0, 50 wei, 50 wei),
+      100 wei
+    );
+    vm.stopPrank();
   }
 
   function testReferenceAttestStatement() public {
     bytes32 uid = prepareSchema();
-    console.logBytes32(uid);
     vm.deal(demander.addr, 100 wei);
-    vm.prank(demander.addr);
-    bytes32 demanderAttestation = prepareAttestStatement(uid, "", 0, 50 wei, 50 wei);
+    vm.startPrank(demander.addr);
+    bytes32 demanderAttestation = prepareAttestStatement(
+      uid, 
+      demander.addr,
+      "",
+      abi.encode(0, 50 wei, 50 wei),
+      100 wei
+    );
+    vm.stopPrank();
 
     vm.deal(supplier.addr, 100 wei);
-    vm.prank(supplier.addr);
-    bytes32 supplierAttestation = prepareAttestStatement(uid, demanderAttestation, 0, 0 wei, 100 wei);
-  
+    vm.startPrank(supplier.addr);
+    bytes32 supplierAttestation = prepareAttestStatement(
+      uid,
+      supplier.addr,
+      demanderAttestation,
+      abi.encode(1, 0 wei, 100 wei),
+      100 wei
+    );
+   vm.stopPrank(); 
   }
 
   function testWithdrawCollateral() public {
-    
+
+    bytes32 uid = prepareSchema();
+    console.logBytes32(uid);
+    vm.deal(demander.addr, 100 wei);
+    vm.startPrank(demander.addr);
+    bytes32 demanderAttestation = prepareAttestStatement(
+      uid, 
+      demander.addr,
+      "",
+      abi.encode(0, 50 wei, 50 wei),
+      100 wei
+    );
+    vm.stopPrank();
+
+    vm.deal(supplier.addr, 100 wei);
+    vm.startPrank(supplier.addr);
+    bytes32 supplierAttestation = prepareAttestStatement(
+      uid,
+      supplier.addr,
+      demanderAttestation,
+      abi.encode(1, 0 wei, 100 wei),
+      100 wei
+    );
+   vm.stopPrank();
+   console.log('here');
+   vm.deal(demander.addr, 100 wei);
+   vm.startPrank(demander.addr);
+   bytes32 recoverAttestation = prepareAttestStatement(
+     uid,
+     demander.addr,
+     supplierAttestation,
+     abi.encode(2, 0 wei, 0 wei),
+     0 wei
+   );
+   vm.stopPrank();
   }
 
 
