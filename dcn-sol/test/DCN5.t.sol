@@ -53,7 +53,7 @@ contract DCN5Test is Test {
   }
 
   function prepareSchema() public returns (bytes32 schemaUid) {
-    string memory schema = "bool isBuy, uint256 collateral, uint256 paymentAmount, uint8 status, address baseValidator";
+    string memory schema = "uint8 action, uint256 collateral, uint256 paymentAmount";
     schemaUid =  schemaRegistry.register(
       schema,
       ISchemaResolver(address(collateralResolver)),
@@ -61,27 +61,32 @@ contract DCN5Test is Test {
     );
   }
 
-  function prepareAttestStatement(bytes32 schemaUid) public returns (bytes32 attestUid) {
+  function prepareAttestStatement(
+    bytes32 schemaUid,
+    bytes32 refUID,
+    uint8 action,
+    uint256 purchasePrice,
+    uint256 collateral
+  ) public returns (bytes32 attestUid) {
 
     AttestationRequestData memory requestData = AttestationRequestData({
       recipient: address(dcn),
       expirationTime: 0,
       revocable: true,
-      refUID: "",
-      data: abi.encode(true, 100, 100, 1, address(dcn)),
-      value: 100 wei
+      refUID: refUID,
+      data: abi.encode(action, purchasePrice, collateral),
+      value: purchasePrice + collateral
     });
     AttestationRequest memory request = AttestationRequest({
       schema: schemaUid,
       data: requestData
     });
-    vm.deal(demander.addr, 100 wei);
-    vm.prank(demander.addr);
     attestUid = eas.attest{value:100 wei}(request); 
     
     console.logBytes32(attestUid);
-
   }
+
+
   function _testRegisterSchema() public {
     bytes32 uid = prepareSchema();
     console.logBytes32(uid);
@@ -91,34 +96,32 @@ contract DCN5Test is Test {
   function testAttestStatement() public {
     bytes32 uid = prepareSchema();
     console.logBytes32(uid);
-    bytes32 attestUid = prepareAttestStatement(uid);
+
+    vm.deal(demander.addr, 100 wei);
+    vm.prank(demander.addr);
+    bytes32 attestUid = prepareAttestStatement(uid, "", 0, 50 wei, 50 wei);
     console.logBytes32(attestUid);
   }
 
   function testReferenceAttestStatement() public {
-    
     bytes32 uid = prepareSchema();
     console.logBytes32(uid);
-    bytes32 demanderAttestation = prepareAttestStatement(uid);
+    vm.deal(demander.addr, 100 wei);
+    vm.prank(demander.addr);
+    bytes32 demanderAttestation = prepareAttestStatement(uid, "", 0, 50 wei, 50 wei);
 
-    AttestationRequestData memory requestData = AttestationRequestData({
-      recipient: address(dcn),
-      expirationTime: 0,
-      revocable: true,
-      refUID: demanderAttestation,
-      data: abi.encode(false, 100, 100, 1, address(dcn)),
-      value: 100 wei
-    });
-    AttestationRequest memory request = AttestationRequest({
-      schema: uid,
-      data: requestData
-    });
     vm.deal(supplier.addr, 100 wei);
     vm.prank(supplier.addr);
-    bytes32 supplierAttesation = eas.attest{value:100 wei}(request); 
+    bytes32 supplierAttestation = prepareAttestStatement(uid, demanderAttestation, 0, 0 wei, 100 wei);
+  
   }
 
-  
+  function testWithdrawCollateral() public {
+    
+  }
+
+
+
 
 
 

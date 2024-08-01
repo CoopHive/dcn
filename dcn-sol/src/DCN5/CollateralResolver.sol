@@ -14,11 +14,11 @@ import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/I
 /// @title TokenResolver
 /// @notice A sample schema resolver that checks whether a specific amount of tokens was approved to be included in an attestation.
 contract CollateralResolver is SchemaResolver {
-    uint256 private immutable _targetValue;
+    //uint256 private immutable _targetValue;
     //error InvalidAllowance();
 
     constructor(IEAS eas) SchemaResolver(eas) {
-      _targetValue = 100 wei;
+     // _targetValue = 100 wei;
     }
 
     function isPayable() public pure override returns (bool) {
@@ -26,9 +26,14 @@ contract CollateralResolver is SchemaResolver {
     }
 
     function onAttest(Attestation calldata attestation, uint256 value) internal view override returns (bool) {
-      console.log(value);
-      //return true;
-      return value == _targetValue;
+      (
+        uint8 action,
+        uint256 collateral,
+        uint256 paymentAmount
+      ) = abi.decode(
+        attestation.data,
+        (uint8, uint256, uint256));
+      return (collateral + paymentAmount == value);
     }
 
     function onRevoke(Attestation calldata /*attestation*/, uint256 /*value*/) internal pure override returns (bool) {
