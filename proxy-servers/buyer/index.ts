@@ -14,8 +14,8 @@ declare global {
   namespace Express {
     interface Request {
       signature: string;
-      timestamp: number;
-      timeout: number;
+      timestamp: bigint;
+      timeout: bigint;
       nonce: string;
     }
   }
@@ -49,15 +49,15 @@ function startProxyServer(settings: {
   });
 
   app.use(async (req, res, next) => {
-    req.timestamp = Date.now();
-    req.timeout = settings.timeout;
+    req.timestamp = BigInt(Date.now());
+    req.timeout = BigInt(settings.timeout);
     req.nonce = uuidv4();
 
     req.signature = await walletClient.signMessage({
       account,
       message: encodeAbiParameters(
         parseAbiParameters("uint timestamp, uint timeout, string uuid"),
-        [BigInt(req.timestamp), BigInt(req.timeout), req.nonce]
+        [req.timestamp, req.timeout, req.nonce]
       ),
     });
     next();

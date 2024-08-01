@@ -110,10 +110,10 @@ function startProxyServer(settings: {
       return;
     }
 
-    const timestamp = parseInt(timestampRaw);
-    const timeout = parseInt(timeoutRaw);
+    const timestamp = BigInt(parseInt(timestampRaw));
+    const timeout = BigInt(parseInt(timeoutRaw));
 
-    if (Date.now() - timestamp > timeout) {
+    if (BigInt(Date.now()) - timestamp > timeout) {
       console.error("Request timeout");
       return;
     }
@@ -121,7 +121,7 @@ function startProxyServer(settings: {
     const address = await recoverMessageAddress({
       message: encodeAbiParameters(
         parseAbiParameters("uint timestamp, uint timeout, string uuid"),
-        [BigInt(timestamp), BigInt(timeout), nonce]
+        [timestamp, timeout, nonce]
       ),
       signature,
     });
