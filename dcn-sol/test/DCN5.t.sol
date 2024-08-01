@@ -28,6 +28,8 @@ contract DCN5Test is Test {
   Vm.Wallet public statementCreator;
   bytes32 statementUid;
 
+  Vm.Wallet public demander;
+
 
 
   function setUp() public {
@@ -39,6 +41,7 @@ contract DCN5Test is Test {
     dcnDeployer = vm.createWallet(vm.deriveKey(mnemonic, 0));
     collateralResolverDeployer = vm.createWallet(vm.deriveKey(mnemonic, 1));
     statementCreator = vm.createWallet(vm.deriveKey(mnemonic, 2));
+    demander = vm.createWallet(vm.deriveKey(mnemonic, 3));
 
     vm.prank(collateralResolverDeployer.addr);
     collateralResolver = new CollateralResolver(eas);
@@ -56,39 +59,43 @@ contract DCN5Test is Test {
     );
   }
 
-  function prepareStatement(bytes32 schemaUid) public returns (bytes32 attestUid) {
+  function prepareAttestStatement(bytes32 schemaUid) public returns (bytes32 attestUid) {
 
     AttestationRequestData memory requestData = AttestationRequestData({
       recipient: address(dcn),
       expirationTime: 0,
       revocable: true,
-      refUID: schemaUid,
-      data: "",
-      value: 0
+      refUID: "",
+      data: abi.encode(true, 100, 100, 1, address(dcn)),
+      value: 100 wei
     });
     AttestationRequest memory request = AttestationRequest({
       schema: schemaUid,
       data: requestData
     });
-
-    attestUid = eas.attest(request); 
+    vm.deal(demander.addr, 100 wei);
+    vm.prank(demander.addr);
+    attestUid = eas.attest{value:100 wei}(request); 
     
     console.logBytes32(attestUid);
 
   }
-  function testRegisterSchema() public {
+  function _testRegisterSchema() public {
     bytes32 uid = prepareSchema();
     console.logBytes32(uid);
   }
 
 
-  function attestStatement() public {
+  function testAttestStatement() public {
     bytes32 uid = prepareSchema();
-    bytes32 attestUid = prepareStatement(uid);
+    console.logBytes32(uid);
+    bytes32 attestUid = prepareAttestStatement(uid);
     console.logBytes32(attestUid);
-
-
   }
+
+  
+
+
 
 
 }
