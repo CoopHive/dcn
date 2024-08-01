@@ -52,12 +52,14 @@ function isHex(s: unknown): asserts s is `0x${string}` {
   }
 }
 
-function isIntString(s: unknown): asserts s is string {
-  if (typeof s != "string" || !/^\d+$/.test(s)) {
-    throw new Error(`${s} is not an integer string`);
+function isUintString(s: unknown): asserts s is string {
+  isString(s);
+  if (!/^\d+$/.test(s)) {
+    throw new Error(`${s} is not a uint string`);
   }
 }
 
+// main
 function startProxyServer(settings: {
   creditsDb: {
     name: string;
@@ -100,8 +102,8 @@ function startProxyServer(settings: {
 
     try {
       isHex(signature);
-      isIntString(timestampRaw);
-      isIntString(timeoutRaw);
+      isUintString(timestampRaw);
+      isUintString(timeoutRaw);
       isString(nonce);
     } catch (e) {
       console.error("Invalid signature or nonce: ", e);
