@@ -19,6 +19,7 @@ contract CollateralResolver is SchemaResolver {
 
     constructor(IEAS eas) SchemaResolver(eas) {
      // _targetValue = 100 wei;
+
     }
 
     function isPayable() public pure override returns (bool) {
@@ -30,10 +31,11 @@ contract CollateralResolver is SchemaResolver {
       (
         uint8 action,
         uint256 collateral,
-        uint256 paymentAmount
+        uint256 paymentAmount,
+        
       ) = abi.decode(
         attestation.data,
-        (uint8, uint256, uint256));
+        (uint8, uint256, uint256, address));
 
         // Creating Statement
         if (action == 0 ) {
@@ -47,32 +49,29 @@ contract CollateralResolver is SchemaResolver {
           (
             , 
             uint256 collateral,
-            uint256 counterPaymentAmount  
+            uint256 counterPaymentAmount,
           ) = abi.decode(
             counterPartyAttestation.data,
-            (uint8, uint256, uint256)
+            (uint8, uint256, uint256, address)
           );
           payable(counterPartyAttestation.recipient).transfer(
             counterPaymentAmount
           );
           return true;
         }
-
+        // redistributing collateral
         if (action == 2) {
-          console.log("Matching statement");
-          console.logBytes32(attestation.refUID);
           Attestation memory supplierAttestation = _eas.getAttestation(
             attestation.refUID
           );
           (
             , 
             uint256 supplierCollateral,
+            ,
+            address validatorSupplier
           ) = abi.decode(
             supplierAttestation.data,
-            (uint8, uint256, uint256)
-          );
-          payable(supplierAttestation.recipient).transfer(
-            supplierCollateral
+            (uint8, uint256, uint256, address)
           );
           Attestation memory demanderAttestation = _eas.getAttestation(
             supplierAttestation.refUID
@@ -80,13 +79,24 @@ contract CollateralResolver is SchemaResolver {
           (
             ,
             uint256 demanderCollateral,
+            ,
+            address validatorDemander
           ) = abi.decode(
             demanderAttestation.data,
-            (uint8, uint256, uint256)
+            (uint8, uint256, uint256, address)
           );
-          payable(demanderAttestation.recipient).transfer(
-            demanderCollateral
-          );
+          if (attestation.attester == validatorDemander &&
+            attestation.attester == validatorSupplier)  {
+            payable(demanderAttestation.recipient).transfer(
+              demanderCollateral
+            );
+            payable(supplierAttestation.recipient).transfer(
+              supplierCollateral
+            );
+          } else {
+            revert("Validator not authorized to distribute collateral back");
+          }
+          
           return true;
         }
     }

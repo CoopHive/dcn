@@ -31,6 +31,8 @@ contract DCN5Test is Test {
   Vm.Wallet public demander;
   Vm.Wallet public supplier;
 
+  Vm.Wallet public validator;
+
 
 
   function setUp() public {
@@ -44,6 +46,7 @@ contract DCN5Test is Test {
     statementCreator = vm.createWallet(vm.deriveKey(mnemonic, 2));
     demander = vm.createWallet(vm.deriveKey(mnemonic, 3));
     supplier = vm.createWallet(vm.deriveKey(mnemonic, 4));
+    validator = vm.createWallet(vm.deriveKey(mnemonic, 5));
 
     vm.prank(collateralResolverDeployer.addr);
     collateralResolver = new CollateralResolver(eas);
@@ -53,7 +56,7 @@ contract DCN5Test is Test {
   }
 
   function prepareSchema() public returns (bytes32 schemaUid) {
-    string memory schema = "uint8 action, uint256 collateral, uint256 paymentAmount";
+    string memory schema = "uint8 action, uint256 collateral, uint256 paymentAmount, address validator";
     schemaUid =  schemaRegistry.register(
       schema,
       ISchemaResolver(address(collateralResolver)),
@@ -99,7 +102,7 @@ contract DCN5Test is Test {
       uid,
       demander.addr,
       "",
-      abi.encode(0, 50 wei, 50 wei),
+      abi.encode(0, 50 wei, 50 wei, validator.addr),
       100 wei
     );
     vm.stopPrank();
@@ -113,7 +116,7 @@ contract DCN5Test is Test {
       uid, 
       demander.addr,
       "",
-      abi.encode(0, 50 wei, 50 wei),
+      abi.encode(0, 50 wei, 50 wei, validator.addr),
       100 wei
     );
     vm.stopPrank();
@@ -124,7 +127,7 @@ contract DCN5Test is Test {
       uid,
       supplier.addr,
       demanderAttestation,
-      abi.encode(1, 0 wei, 100 wei),
+      abi.encode(1, 0 wei, 100 wei, validator.addr),
       100 wei
     );
    vm.stopPrank(); 
@@ -140,7 +143,7 @@ contract DCN5Test is Test {
       uid, 
       demander.addr,
       "",
-      abi.encode(0, 50 wei, 50 wei),
+      abi.encode(0, 50 wei, 50 wei, validator.addr),
       100 wei
     );
     vm.stopPrank();
@@ -151,18 +154,18 @@ contract DCN5Test is Test {
       uid,
       supplier.addr,
       demanderAttestation,
-      abi.encode(1, 0 wei, 100 wei),
+      abi.encode(1, 0 wei, 100 wei, validator.addr),
       100 wei
     );
    vm.stopPrank();
    console.log('here');
-   vm.deal(demander.addr, 100 wei);
-   vm.startPrank(demander.addr);
+   vm.deal(validator.addr, 100 wei);
+   vm.startPrank(validator.addr);
    bytes32 recoverAttestation = prepareAttestStatement(
      uid,
      demander.addr,
      supplierAttestation,
-     abi.encode(2, 0 wei, 0 wei),
+     abi.encode(2, 0 wei, 0 wei, validator.addr),
      0 wei
    );
    vm.stopPrank();
