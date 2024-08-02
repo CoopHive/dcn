@@ -11,11 +11,9 @@ import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/reso
 
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/IEAS.sol";
 
-/// @title TokenResolver
-/// @notice A sample schema resolver that checks whether a specific amount of tokens was approved to be included in an attestation.
+/// @title CollateralResolver
+/// @notice Basic ethereum collateral resolver
 contract CollateralResolver is SchemaResolver {
-    //uint256 private immutable _targetValue;
-    //error InvalidAllowance();
 
     constructor(IEAS eas) SchemaResolver(eas) {
      // _targetValue = 100 wei;
@@ -27,7 +25,6 @@ contract CollateralResolver is SchemaResolver {
     }
 
     function onAttest(Attestation calldata attestation, uint256 value) internal  override returns (bool) {
-      console.log("here 2");
       (
         uint8 action,
         uint256 collateral,
@@ -39,6 +36,7 @@ contract CollateralResolver is SchemaResolver {
 
         // Creating Statement
         if (action == 0 ) {
+          // call Ivalidator(buyerAddress)
           return (collateral + paymentAmount == value);
         }
         // matching a statement

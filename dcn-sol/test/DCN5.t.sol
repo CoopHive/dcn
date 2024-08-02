@@ -3,7 +3,12 @@ pragma solidity 0.8.26;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/DCN5/DCN5.sol";
-import "../src/DCN5/CollateralResolver.sol";
+
+import "../src/resolvers/BuyerResolver.sol";
+import "../src/resolvers/SellerResolver.sol";
+
+import "../src/resolvers/TimeoutResolver.sol";
+
 import {
   IEAS,
   AttestationRequest,
@@ -12,10 +17,15 @@ import {
 import { ISchemaRegistry } from "@ethereum-attestation-service/eas-contracts/ISchemaRegistry.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/ISchemaResolver.sol";
 
+// contracts signing messages
 
 contract DCN5Test is Test {
   DCN5 public dcn;
-  CollateralResolver public collateralResolver;
+
+  BuyerResolver public buyerCollateralResolver;
+  SellerResolver public sellerCollateralResolver;
+
+  TimeoutResolver public timeoutResolver;
 
   IEAS eas =  IEAS(0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587);
   ISchemaRegistry schemaRegistry = ISchemaRegistry(0xA7b39296258348C78294F95B872b282326A97BDF);
@@ -24,16 +34,16 @@ contract DCN5Test is Test {
 
   Vm.Wallet public dcnDeployer;
   Vm.Wallet public collateralResolverDeployer;
-
-  Vm.Wallet public statementCreator;
-  bytes32 statementUid;
+  Vm.Wallet public timeoutResolverDeployer;
 
   Vm.Wallet public demander;
   Vm.Wallet public supplier;
 
-  Vm.Wallet public validator;
+  Vm.Wallet public collateralValidator;
+  Vm.Wallet public timeoutValidator;
 
-
+  bytes32 dealAttestationUID;
+  bytes32 timeoutAttestationUID;
 
   function setUp() public {
     forkId = vm.createFork(vm.envString("ALCHEMY_RPC_URL"), 20407271);
@@ -43,25 +53,51 @@ contract DCN5Test is Test {
 
     dcnDeployer = vm.createWallet(vm.deriveKey(mnemonic, 0));
     collateralResolverDeployer = vm.createWallet(vm.deriveKey(mnemonic, 1));
-    statementCreator = vm.createWallet(vm.deriveKey(mnemonic, 2));
-    demander = vm.createWallet(vm.deriveKey(mnemonic, 3));
-    supplier = vm.createWallet(vm.deriveKey(mnemonic, 4));
-    validator = vm.createWallet(vm.deriveKey(mnemonic, 5));
+    timeoutResolverDeployer = vm.createWallet(vm.deriveKey(mnemonic, 2));
+    
+    demander = vm.createWallet(vm.deriveKey(mnemonic, 4));
+    supplier = vm.createWallet(vm.deriveKey(mnemonic, 5));
+
+    sellerValidator = vm.createWallet(vm.deriveKey(mnemonic, 6));
+    buyerValidator = vm.createWallet(vm.deriveKey(mnemonic, 7));
 
     vm.prank(collateralResolverDeployer.addr);
     collateralResolver = new CollateralResolver(eas);
+
+    vm.prank(timeoutResolverDeployer.addr);
+    timeoutResolver = new TimeoutResolver(eas);
 
     vm.prank(dcnDeployer.addr);
     dcn = new DCN5();
   }
 
-  function prepareSchema() public returns (bytes32 schemaUid) {
-    string memory schema = "uint8 action, uint256 collateral, uint256 paymentAmount, address validator";
-    schemaUid =  schemaRegistry.register(
-      schema,
-      ISchemaResolver(address(collateralResolver)),
+  function prepareDealSchemas() public returns (bytes32 schemaUid) {
+    // trival validator of the asker
+    // buy side from validor attestion, allow for any asker validor
+
+    // delegateAttestions from validator
+    // validator put somethong on chain on behalf of 
+
+    //string memory schema = "uint8 action, uint256 collateral, uint256 paymentAmount, address validator";
+    string memory buyerSchema = "uint256 paymentAmount, address timeoutValidator";
+    buySchemaUid =  schemaRegistry.register(
+      buySchema,
+      ISchemaResolver(address(buyerCollateralResolver)),
       true
     );
+    string memory sellerSchema = "uint256 collateral";
+    sellSchemaUid =  schemaRegistry.register(
+      sellSchema,
+      ISchemaResolver(address(sellerCollateralResolver)),
+      true
+    );
+    string memory timeoutSchema = "uint256 init, uint256 final, uint256 penalty"
+    timeoutSchemaUid =  schemaRegistry.register(
+      timeoutSchema
+      ISchemaResolver(address(timeoutResolver)),
+      true
+    );
+
   }
 
   function prepareAttestStatement(
@@ -89,12 +125,12 @@ contract DCN5Test is Test {
 
 
   function _testRegisterSchema() public {
-    bytes32 uid = prepareSchema();
+    bytes32 uid = prepareDealSchema();
   }
 
 
   function testAttestStatement() public {
-    bytes32 uid = prepareSchema();
+    bytes32 uid = prepareDealSchema();
 
     vm.deal(demander.addr, 100 wei);
     vm.startPrank(demander.addr);
@@ -109,7 +145,7 @@ contract DCN5Test is Test {
   }
 
   function testReferenceAttestStatement() public {
-    bytes32 uid = prepareSchema();
+    bytes32 uid = prepareDealSchema();
     vm.deal(demander.addr, 100 wei);
     vm.startPrank(demander.addr);
     bytes32 demanderAttestation = prepareAttestStatement(
@@ -135,7 +171,7 @@ contract DCN5Test is Test {
 
   function testWithdrawCollateral() public {
 
-    bytes32 uid = prepareSchema();
+    bytes32 uid = prepareDealSchema();
     console.logBytes32(uid);
     vm.deal(demander.addr, 100 wei);
     vm.startPrank(demander.addr);
