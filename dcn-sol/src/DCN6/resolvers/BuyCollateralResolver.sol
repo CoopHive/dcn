@@ -4,10 +4,14 @@ import "forge-std/console.sol";
 
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/IEAS.sol";
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/SchemaResolver.sol";
-
+import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/ISchemaResolver.sol";
 
 contract BuyCollateralResolver is SchemaResolver {
-  constructor (IEAS eas) SchemaResolver(eas) {}
+  ISchemaResolver public validatorResolver;
+
+  constructor (IEAS eas, address _validatorResolver) SchemaResolver(eas) {
+    validatorResolver = ISchemaResolver(_validatorResolver);
+  }
 
   function isPayable() public pure override returns (bool) {
     return true;
@@ -17,7 +21,18 @@ contract BuyCollateralResolver is SchemaResolver {
     Attestation calldata attestation,
     uint256 value
   ) internal override returns (bool) {
-    console.log("onAttest");
+    (
+      uint256 amount,
+      uint256 collateralRequested,
+      address validator,
+      uint256 deadline
+    ) = abi.decode(
+      attestation.data,
+      (uint256, uint256, address, uint256)
+    );
+    require(block.number < deadline, "Invalid deadline");
+    require(amount == value, "Invalid amount");
+    payable(address(validatorResolver)).transfer(amount);
     return true;
   }
 

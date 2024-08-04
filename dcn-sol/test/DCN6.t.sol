@@ -23,6 +23,10 @@ contract DCN6Test is Test {
   SellCollateralResolver public sellResolver;
   ValidatorResolver public validatorResolver;
 
+  bytes32 public buySchemaUID;
+  bytes32 public sellSchemaUID;
+  bytes32 public validatorSchemaUID;
+
   function setUp() public {
     forkId = vm.createFork(vm.envString("ALCHEMY_RPC_URL"), 20407271);
     vm.selectFork(forkId);
@@ -35,31 +39,87 @@ contract DCN6Test is Test {
     supplier = vm.createWallet(vm.deriveKey(mnemonic, 2));
     validator = vm.createWallet(vm.deriveKey(mnemonic, 3));
 
-    buyResolver = new BuyCollateralResolver(EasUtil.getEAS());
-    sellResolver = new SellCollateralResolver(EasUtil.getEAS());
     validatorResolver = new ValidatorResolver(EasUtil.getEAS());
-  }
+    
+    buyResolver = new BuyCollateralResolver(EasUtil.getEAS(), address(validatorResolver));
+    sellResolver = new SellCollateralResolver(EasUtil.getEAS(), address(validatorResolver));
 
-  function testAttestBuy() public {
-    (
-      bytes32 buySchemaUID,
-      bytes32 sellSchemaUID,
-      bytes32 validatorSchemaUID
+    ( 
+      buySchemaUID,
+      sellSchemaUID,
+      validatorSchemaUID
     ) = EasUtil.prepareDCNSchemas(
       deployer.addr,
       buyResolver,
       sellResolver,
       validatorResolver
     );
-    vm.deal(demander.addr, 200 wei);
-    vm.startPrank(demander.addr);
-    EasUtil.attest(
+  }
+
+  function prepareAttestBuy(
+    address buyer,
+    uint256 collateralRequested,
+    uint256 purchaseAmount
+  ) public  returns (bytes32 buyUID) {
+    vm.deal(buyer,  purchaseAmount);
+    buyUID = EasUtil.attest(
       buySchemaUID,
-      demander.addr,
+      buyer,
       "",
-      abi.encode(100 wei, 100 wei, validator.addr),
-      200 wei
+      abi.encode(purchaseAmount, collateralRequested, validator.addr, block.number + 100),
+      purchaseAmount 
+    );
+
+  }
+
+  function prepareAttestSell(
+    bytes32 buyerAttestationUID,
+    address seller,
+    uint256 collateral
+
+  ) public returns (bytes32 sellUID) {
+    vm.deal(seller, collateral);
+    sellUID = EasUtil.attest(
+      sellSchemaUID,
+      seller,
+      buyerAttestationUID,
+      abi.encode(collateral, validator.addr),
+      collateral
     );
   }
 
+  function prepareAttestValidation(
+    bytes32 sellerAttestationUID,
+    bool isApproved
+  ) public returns (bytes32 validationUID) {
+    EasUtil.attest(
+      validatorSchemaUID,
+      validator.addr,
+      sellerAttestationUID,
+      abi.encode(isApproved),
+      0
+    );
+    
+  }
+
+  function testAttestBuy() public {
+    vm.prank(demander.addr);
+    bytes32 buyUID = prepareAttestBuy(demander.addr,  100 wei, 100 wei);
+  }
+
+  function testAttestSell() public {
+    vm.prank(demander.addr);
+    bytes32 buyUID = prepareAttestBuy(demander.addr, 100 wei, 100 wei);
+    vm.prank(supplier.addr);
+    prepareAttestSell(buyUID, supplier.addr, 100 wei);
+  }
+
+  function testAttestValidate() public {
+    vm.prank(demander.addr);
+    bytes32 buyUID = prepareAttestBuy(demander.addr, 100 wei, 100 wei);
+    vm.prank(supplier.addr);
+    bytes32 sellUID = prepareAttestSell(buyUID, supplier.addr, 100 wei);
+    vm.prank(validator.addr);
+    prepareAttestValidation(sellUID, true);
+  }
 }

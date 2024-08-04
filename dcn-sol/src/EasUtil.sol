@@ -60,9 +60,9 @@ library EasUtil {
     bytes32 sellSchemaUID,
     bytes32 validatorSchemaUID
   ) {
-    string memory buySchema = "uint256 amount, uint256 collateral, address validator";
+    string memory buySchema = "uint256 amount, uint256 collateralRequested, address validator, uind256 deadline";
     string memory sellSchema = "uint256 collateral, address validator";
-    string memory validatorSchema = "uint256 init, uint256 final";
+    string memory validatorSchema = "bool isApproved";
 
     buySchemaUID = getSchemaRegistry().register(
       buySchema, buyCollateralResolver, true
