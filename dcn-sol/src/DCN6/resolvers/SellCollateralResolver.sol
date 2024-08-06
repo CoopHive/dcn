@@ -5,12 +5,12 @@ import "forge-std/console.sol";
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/IEAS.sol";
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/SchemaResolver.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/ISchemaResolver.sol";
-
+import { ITCR } from './TrustedValidatorResolver/ITCR.sol';
 contract SellCollateralResolver is SchemaResolver {
-  ISchemaResolver public validatorResolver;
+  ITCR public validatorResolver;
 
   constructor (IEAS eas, address _validatorResolver) SchemaResolver(eas) {
-    validatorResolver = ISchemaResolver(_validatorResolver);
+    validatorResolver = ITCR(_validatorResolver);
   }
 
   function isPayable() public pure override returns (bool) {
@@ -43,10 +43,17 @@ contract SellCollateralResolver is SchemaResolver {
     );
 
     require(collateral == collateralRequested, "Collateral mismatch");
-    require(collateral == value, "Value mismatch");
     require(block.number < deadline, "Deadline expired");
     require(buyerValidator == sellerValidator, "same validator for now");
-    payable(address(validatorResolver)).transfer(collateral);
+    
+    uint256 freeCollateral = validatorResolver.userCollateral(attestation.recipient).freeCollateral;
+
+    if (freeCollateral < collateral) {
+      validatorResolver.addCollateral{value:msg.value}(attestation.recipient, collateral); 
+    } else {
+      require(collateral == value, "Value mismatch");
+    }
+    //payable(address(validatorResolver)).transfer(collateral);
     return true;
   }
 

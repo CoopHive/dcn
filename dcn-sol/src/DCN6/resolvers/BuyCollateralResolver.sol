@@ -6,11 +6,12 @@ import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/I
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/SchemaResolver.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/ISchemaResolver.sol";
 
+import { ITCR } from './TrustedValidatorResolver/ITCR.sol';
 contract BuyCollateralResolver is SchemaResolver {
-  ISchemaResolver public validatorResolver;
+  ITCR public validatorResolver;
 
   constructor (IEAS eas, address _validatorResolver) SchemaResolver(eas) {
-    validatorResolver = ISchemaResolver(_validatorResolver);
+    validatorResolver = ITCR(_validatorResolver);
   }
 
   function isPayable() public pure override returns (bool) {
@@ -27,12 +28,14 @@ contract BuyCollateralResolver is SchemaResolver {
       address validator,
       uint256 deadline
     ) = abi.decode(
-      attestation.data,
-      (uint256, uint256, address, uint256)
+    attestation.data,
+    (uint256, uint256, address, uint256)
     );
     require(block.number < deadline, "Invalid deadline");
     require(amount == value, "Invalid amount");
-    payable(address(validatorResolver)).transfer(amount);
+
+    validatorResolver.addCollateral{value:msg.value}(attestation.recipient, amount);
+    //payable(address(validatorResolver)).transfer(amount);
     return true;
   }
 

@@ -5,7 +5,7 @@ import "forge-std/console.sol";
 
 import "../src/DCN6/resolvers/BuyCollateralResolver.sol";
 import "../src/DCN6/resolvers/SellCollateralResolver.sol";
-import "../src/DCN6/resolvers/ValidatorResolver.sol";
+import "../src/DCN6/resolvers/TrustedValidatorResolver/TrustedValidatorResolver.sol";
 
 import {EasUtil} from "../src/EasUtil.sol";
 
@@ -21,7 +21,7 @@ contract DCN6Test is Test {
 
   BuyCollateralResolver public buyResolver;
   SellCollateralResolver public sellResolver;
-  ValidatorResolver public validatorResolver;
+  TrustedValidatorResolver public trustedValidatorResolver;
 
   bytes32 public buySchemaUID;
   bytes32 public sellSchemaUID;
@@ -39,10 +39,15 @@ contract DCN6Test is Test {
     supplier = vm.createWallet(vm.deriveKey(mnemonic, 2));
     validator = vm.createWallet(vm.deriveKey(mnemonic, 3));
 
-    validatorResolver = new ValidatorResolver(EasUtil.getEAS());
+    trustedValidatorResolver = new TrustedValidatorResolver(EasUtil.getEAS(), validator.addr);
     
-    buyResolver = new BuyCollateralResolver(EasUtil.getEAS(), address(validatorResolver));
-    sellResolver = new SellCollateralResolver(EasUtil.getEAS(), address(validatorResolver));
+    buyResolver = new BuyCollateralResolver(EasUtil.getEAS(), address(trustedValidatorResolver));
+    sellResolver = new SellCollateralResolver(EasUtil.getEAS(), address(trustedValidatorResolver));
+
+    vm.prank(validator.addr);
+    trustedValidatorResolver.setBuyCollateralResolver(address(buyResolver));
+    vm.prank(validator.addr);
+    trustedValidatorResolver.setSellCollateralResolver(address(sellResolver));
 
     ( 
       buySchemaUID,
@@ -52,7 +57,7 @@ contract DCN6Test is Test {
       deployer.addr,
       buyResolver,
       sellResolver,
-      validatorResolver
+      trustedValidatorResolver
     );
   }
 

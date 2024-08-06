@@ -4,10 +4,43 @@ import "forge-std/console.sol";
 
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/IEAS.sol";
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/SchemaResolver.sol";
+import { UserCollateral } from "./ITCR.sol";
 
+contract TrustedValidatorResolver is SchemaResolver {
+  address validator; 
+  address buyCollateralResolver;
+  address sellCollateralResolver;
+  mapping (address => UserCollateral) public userCollateral;
 
-contract ValidatorResolver is SchemaResolver {
-  constructor (IEAS eas) SchemaResolver(eas) {}
+  constructor (
+    IEAS eas,
+    address _validator
+  ) SchemaResolver(eas) {
+    validator = _validator;
+  }
+
+  modifier onlyResolvers() {
+    require(msg.sender == buyCollateralResolver || msg.sender == sellCollateralResolver, "Only resolvers");
+    _;
+  }
+
+  modifier onlyValidator() {
+    require(msg.sender == validator, "Only validator");
+    _;
+  }
+
+  function setBuyCollateralResolver(
+    address _buyCollateralResolver
+  ) public onlyValidator {
+    buyCollateralResolver = _buyCollateralResolver; 
+  }
+
+  function setSellCollateralResolver(
+    address _sellCollateralResolver 
+  ) public onlyValidator {
+    sellCollateralResolver = _sellCollateralResolver;
+  }
+
 
   function isPayable() public pure override returns (bool) {
     return true;
@@ -57,7 +90,17 @@ contract ValidatorResolver is SchemaResolver {
   function onRevoke(
     Attestation calldata attestation,
     uint256 value
-  ) internal pure override returns (bool) {}
+  ) internal pure override returns (bool) {
+
+  }
+
+
+  function addCollateral(
+    address user,
+    uint256 collateral
+  ) public payable onlyResolvers {
+    userCollateral[user].lockedCollateral += collateral;
+  }
 }
 
 
