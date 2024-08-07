@@ -1,8 +1,10 @@
 pragma solidity 0.8.26;
 
-import "forge-std/console.sol"; 
-import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/IEAS.sol";
-import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/resolver/SchemaResolver.sol";
+import "hardhat/console.sol";
+
+import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/SchemaResolver.sol";
+import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import { UserCollateral } from "./ITCR.sol";
 
 contract TrustedValidatorResolver is SchemaResolver {
