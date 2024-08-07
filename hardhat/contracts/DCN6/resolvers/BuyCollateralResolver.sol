@@ -6,6 +6,8 @@ import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/cont
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 
 import { ITCR } from './TrustedValidatorResolver/ITCR.sol';
+
+
 contract BuyCollateralResolver is SchemaResolver {
   ITCR public validatorResolver;
 
@@ -21,26 +23,32 @@ contract BuyCollateralResolver is SchemaResolver {
     Attestation calldata attestation,
     uint256 value
   ) internal override returns (bool) {
-    (
-      uint256 amount,
+    ( address supplier,
+      uint256 jobCost,
+      uint256 creditsRequested,
       uint256 collateralRequested,
       address validator,
-      uint256 deadline
+      uint256 offerDeadline,
+      uint256 jobDeadline,
+      uint256 arbitrationDeadline
     ) = abi.decode(
     attestation.data,
-    (uint256, uint256, address, uint256)
+    (address, uint256, uint256, uint256, address, uint256, uint256, uint256)
     );
-    require(block.number < deadline, "Invalid deadline");
-    require(amount == value, "Invalid amount");
+    //require(block.number < deadline, "Invalid deadline");
+    require(jobCost == value, "Invalid amount");
 
-    validatorResolver.addCollateral{value:msg.value}(attestation.recipient, amount);
+    validatorResolver.addCollateral{value:msg.value}(attestation.recipient, jobCost);
     //payable(address(validatorResolver)).transfer(amount);
+    console.log("Attested");
     return true;
   }
 
   function onRevoke(
     Attestation calldata attestation,
     uint256 value
-  ) internal pure override returns (bool) {}
+  ) internal pure override returns (bool) {
+    return true;
+  }
 }
 

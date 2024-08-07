@@ -5,22 +5,23 @@ import {
 import { expect } from "chai";
 import hre from "hardhat";
 import { getAddress, parseGwei, getContract } from "viem";
-import { WalletClient  } from "@nomicfoundation/hardhat-viem/types";
-import EAS from '../external/EAS.json';
+import { WalletClient, PublicClient  } from "@nomicfoundation/hardhat-viem/types";
+//import EASJson from '../external/EAS.json';
+import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32 } from '@ethereum-attestation-service/eas-sdk';
 
-
-type BuyMessage  = {
-  supplier: string,
-  jobCost: bigint,
-  creditsRequested: bigint,
-  collateralRequested: bigint,
-  validator: string,
-  offerDeadline: bigint,
-  jobDeadline: bigint,
-  arbitrationDeadline: bigint
-}
+type BuyMessage  = [
+  supplier: {name: string, value: any, type: string},
+  jobCost: {name: string, value: any, type: string},
+  creditsRequested: {name: string, value: any, type: string},
+  collateralRequested: {name: string, value: any, type: string},
+  validator: {name: string, value: any, type: string},
+  offerDeadline: {name: string, value: any, type: string},
+  jobDeadline: {name: string, value: any, type: string},
+  arbitrationDeadline: {name: string, value: any, type: string}
+]
 
 describe("DCN6", function () {
+  let publicClient: PublicClient;
   let deployer: WalletClient;
 
   let buyer: WalletClient;
@@ -29,6 +30,8 @@ describe("DCN6", function () {
 
   const easAddress: `0x${string}` = '0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587'
   const schemaRegistryAddress: `0x${string}` = '0xA7b39296258348C78294F95B872b282326A97BDF'
+ 
+  let eas: any; 
   let schemaRegistry: any;
 
   let buyResolver: any;
@@ -44,18 +47,12 @@ describe("DCN6", function () {
   let validatorSchema: string = "bool isApproved"
   let validatorSchemaUID: `0x${string}`;
 
-  beforeEach(async () => {
-    const publicClient = await hre.viem.getPublicClient();
+  before(async () => {
+    publicClient = await hre.viem.getPublicClient();
     [deployer, buyer, seller, validator] = await hre.viem.getWalletClients();
-    const schemaRegistry = await hre.viem.getContractAt("ISchemaRegistry", schemaRegistryAddress);
-    const eas = await hre.viem.getContractAt("IEAS", easAddress);
+    schemaRegistry = await hre.viem.getContractAt("ISchemaRegistry", schemaRegistryAddress);
+    eas = await hre.viem.getContractAt("IEAS", easAddress);
 
-    /*
-    eas = await getContract({
-      abi: EAS.abi,
-      address: EAS.address as `0x${string}`,
-   })
-  */
     trustedValidatorResolver = await hre.viem.deployContract(
       "TrustedValidatorResolver",
       [eas.address, validator.account.address],
@@ -73,30 +70,59 @@ describe("DCN6", function () {
     await trustedValidatorResolver.write.setBuyCollateralResolver([buyResolver.address]);
     await trustedValidatorResolver.write.setSellCollateralResolver([sellResolver.address]);
 
-    buySchemaUID = await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
+    let hash = await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
+    let receipt = await publicClient.waitForTransactionReceipt({ hash });
+    buySchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
+    
+    hash = await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
+    receipt = await publicClient.waitForTransactionReceipt({ hash });
+    sellSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
+    console.log('sellSchemaUID', sellSchemaUID);
+    hash = await schemaRegistry.write.register([validatorSchema, trustedValidatorResolver.address, true]);
+    receipt = await publicClient.waitForTransactionReceipt({ hash });
+    validatorSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
+    console.log('validatorSchemaUID', validatorSchemaUID);
 
-    sellSchemaUID = await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
 
-    validatorSchemaUID = await schemaRegistry.write.register([validatorSchema, trustedValidatorResolver.address, true]);
 
 
 
   }) 
 
   it("Buyer should deposit collateral", async function () {
-    console.log(eas.write.attest)
+    
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: buyer} });
+    const buyMessage: BuyMessage = [
+      {name: 'supplier', value: buyer.account.address, type: 'address'},
+      {name: 'jobCost', value: 100n, type: 'uint256'},
+      {name: 'creditsRequested', value: 100n, type: 'uint256'},
+      {name: 'collateralRequested', value: 100n, type: 'uint256'},
+      {name: 'validator', value: validator.account.address, type: 'address'},
+      {name: 'offerDeadline', value: (await publicClient.getBlockNumber()) + 1800n, type: 'uint256'},
+      {name: 'jobDeadline', value: (await publicClient.getBlockNumber()) + 3600n, type: 'uint256'},
+      {name: 'arbitrationDeadline', value: (await publicClient.getBlockNumber()) + 7200n, type: 'uint256'}
+    ]
+    console.log('buyMessage', buyMessage)
+    const buySchemaEncoder = new SchemaEncoder(buySchema)
+    const encodedData = buySchemaEncoder.encodeData(buyMessage)
+    const balance = await publicClient.getBalance({address: buyer.account.address})
+    console.log('balance', balance)
+    console.log('buySchemaUID', buySchemaUID)
+    await eas.write.attest([
+      { 
+        schema: buySchemaUID,
+        data: {
+          recipient: buyer.account.address,
+          expirationTime: NO_EXPIRATION,
+          revocable: false,
+          refUID: ZERO_BYTES32,
+          data: encodedData as `0x${string}`,
+          value: 100n
+        }
+      }
+    ], {value: 100n})
 
-    const buyMessage: BuyMessage = {
-      supplier: buyer.account.address,
-      jobCost: 1n,
-      creditsRequested: 1n,
-      collateralRequested: 1n,
-      validator: validator.account.address,
-      offerDeadline: 1n,
-      jobDeadline: 1n,
-      arbitrationDeadline: 1n
-    }
+  
     
     
     //expect(await lock.read.unlockTime()).to.equal(unlockTime);
