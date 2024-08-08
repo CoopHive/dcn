@@ -12,6 +12,7 @@ import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32 } from '@ether
 type BuyMessage  = [
   supplier: {name: string, value: any, type: string},
   jobCost: {name: string, value: any, type: string},
+  paymentToken: {name: string, value: any, type: string},
   creditsRequested: {name: string, value: any, type: string},
   collateralRequested: {name: string, value: any, type: string},
   validator: {name: string, value: any, type: string},
@@ -22,23 +23,21 @@ type BuyMessage  = [
 
 describe("DCN6", function () {
   let publicClient: PublicClient;
+
   let deployer: WalletClient;
 
   let buyer: WalletClient;
   let seller: WalletClient;
   let validator: WalletClient;
 
+  let erc20: any;
+  let erc20Address: `0x${string}`;
+
   const easAddress: `0x${string}` = '0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587'
   const schemaRegistryAddress: `0x${string}` = '0xA7b39296258348C78294F95B872b282326A97BDF'
- 
-  let eas: any; 
-  let schemaRegistry: any;
 
-  let buyResolver: any;
-  let sellResolver: any;
-  let trustedValidatorResolver: any;
-
-  let buySchema: string = "address supplier, uint256 jobCost, uint256 creditsRequested, uint256 collateralRequested, address validator, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
+  let buyResolverAddress: `0x${string}`;
+  let buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, address validator, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
   let buySchemaUID: `0x${string}`;
 
   let sellSchema: string = "uint256 collateral, address validator"
@@ -50,19 +49,27 @@ describe("DCN6", function () {
   before(async () => {
     publicClient = await hre.viem.getPublicClient();
     [deployer, buyer, seller, validator] = await hre.viem.getWalletClients();
-    schemaRegistry = await hre.viem.getContractAt("ISchemaRegistry", schemaRegistryAddress);
-    eas = await hre.viem.getContractAt("IEAS", easAddress);
+    // Mock ERC20
+    erc20 = await hre.viem.deployContract("ERC20Mock", [], {client: {wallet: deployer}});
+    erc20Address = erc20.address;
+    
+    // EAS
+    const schemaRegistry = await hre.viem.getContractAt("ISchemaRegistry", schemaRegistryAddress);
+    const eas = await hre.viem.getContractAt("IEAS", easAddress);
 
-    trustedValidatorResolver = await hre.viem.deployContract(
+    const trustedValidatorResolver = await hre.viem.deployContract(
       "TrustedValidatorResolver",
       [eas.address, validator.account.address],
       {client: {wallet: validator}}
     );
-    buyResolver = await hre.viem.deployContract(
+
+    const buyResolver = await hre.viem.deployContract(
       "BuyCollateralResolver",
       [eas.address, trustedValidatorResolver.address]
     );
-    sellResolver = await hre.viem.deployContract(
+    buyResolverAddress = buyResolver.address;
+
+    const sellResolver = await hre.viem.deployContract(
       "SellCollateralResolver",
       [eas.address, trustedValidatorResolver.address]
     );
@@ -73,11 +80,13 @@ describe("DCN6", function () {
     let hash = await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
     let receipt = await publicClient.waitForTransactionReceipt({ hash });
     buySchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
-    
+    console.log('buySchemaUID', buySchemaUID); 
+
     hash = await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
     receipt = await publicClient.waitForTransactionReceipt({ hash });
     sellSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
     console.log('sellSchemaUID', sellSchemaUID);
+
     hash = await schemaRegistry.write.register([validatorSchema, trustedValidatorResolver.address, true]);
     receipt = await publicClient.waitForTransactionReceipt({ hash });
     validatorSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
@@ -90,11 +99,16 @@ describe("DCN6", function () {
   }) 
 
   it("Buyer should deposit collateral", async function () {
-    
+    await erc20.write.mint([buyer.account.address, 100n]);
+
+    const erc20Buyer = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: buyer} });
+    await erc20Buyer.write.approve([buyResolverAddress, 100n]);
+
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: buyer} });
     const buyMessage: BuyMessage = [
       {name: 'supplier', value: buyer.account.address, type: 'address'},
       {name: 'jobCost', value: 100n, type: 'uint256'},
+      {name: 'paymentToken', value: erc20.address, type: 'address'},
       {name: 'creditsRequested', value: 100n, type: 'uint256'},
       {name: 'collateralRequested', value: 100n, type: 'uint256'},
       {name: 'validator', value: validator.account.address, type: 'address'},
@@ -117,10 +131,10 @@ describe("DCN6", function () {
           revocable: false,
           refUID: ZERO_BYTES32,
           data: encodedData as `0x${string}`,
-          value: 100n
+          value: 0n
         }
       }
-    ], {value: 100n})
+    ])
 
   
     

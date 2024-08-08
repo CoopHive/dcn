@@ -1,24 +1,29 @@
 pragma solidity 0.8.26;
 
 import "hardhat/console.sol";
+
+import { IERC20  } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20  } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import { IEAS, Attestation } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/SchemaResolver.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
+
 import { ITCR } from './TrustedValidatorResolver/ITCR.sol';
+
 contract SellCollateralResolver is SchemaResolver {
+  using SafeERC20 for IERC20;
+  error InvalidAllowance();
+  
   ITCR public validatorResolver;
 
   constructor (IEAS eas, address _validatorResolver) SchemaResolver(eas) {
     validatorResolver = ITCR(_validatorResolver);
   }
 
-  function isPayable() public pure override returns (bool) {
-    return true;
-  }
-
   function onAttest(
     Attestation calldata attestation,
-    uint256 value
+    uint256 /*value*/
   ) internal override returns (bool) {
     (
       uint256 collateral,
@@ -32,27 +37,30 @@ contract SellCollateralResolver is SchemaResolver {
       attestation.refUID
     );
 
-    ( uint256 amount,
+    ( address supplier,
+      /*uint256 jobCost*/,
+      address paymentToken,
+      /*uint256 creditsRequested*/,
       uint256 collateralRequested,
       address buyerValidator,
-      uint256 deadline
+      uint256 offerDeadline,
+      uint256 jobDeadline,
+      uint256 arbitrationDeadline
     ) = abi.decode(
-      buyerAttestation.data,
-      (uint256, uint256, address, uint256)
+    attestation.data,
+    (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
     );
-
     require(collateral == collateralRequested, "Collateral mismatch");
-    require(block.number < deadline, "Deadline expired");
-    require(buyerValidator == sellerValidator, "same validator for now");
-    
-    uint256 freeCollateral = validatorResolver.userCollateral(attestation.recipient).freeCollateral;
 
-    if (freeCollateral < collateral) {
-      validatorResolver.addCollateral{value:msg.value}(attestation.recipient, collateral); 
-    } else {
-      require(collateral == value, "Value mismatch");
-    }
-    //payable(address(validatorResolver)).transfer(collateral);
+    require(block.number < offerDeadline, "Offer Deadline expired");
+    require(offerDeadline < jobDeadline, "Job must finish after offer");
+    require(jobDeadline < arbitrationDeadline, "Arbitration must finish after job");
+
+    require(buyerValidator == sellerValidator, "same validator for now");
+
+    IERC20(paymentToken).transferFrom(attestation.recipient, sellerValidator, collateral);
+    validatorResolver.addCollateral(attestation.recipient, paymentToken, collateral);
+    
     return true;
   }
 

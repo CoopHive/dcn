@@ -9,19 +9,21 @@ struct UserCollateral {
 
 interface ITCR is ISchemaResolver {
   function setBuyCollateralResolver(
-   address _buyCollateralResolver 
+   address buyCollateralResolver 
   ) external;
 
   function setSellCollateralResolver(
-   address _sellCollateralResolver 
+   address sellCollateralResolver 
   ) external;
 
   function addCollateral(
-    address _validator,
-    uint256 _collateral
+    address validator,
+    address collateralToken,
+    uint256 collateral
   ) external payable;
 
   function userCollateral(
-    address user
+    address user,
+    address paymentToken
   ) external returns (UserCollateral memory);
 }

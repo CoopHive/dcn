@@ -7,12 +7,16 @@ import { SchemaResolver } from "@ethereum-attestation-service/eas-contracts/cont
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import { UserCollateral } from "./ITCR.sol";
 
+import { IERC20  } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20  } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 contract TrustedValidatorResolver is SchemaResolver {
   address validator; 
   address buyCollateralResolver;
   address sellCollateralResolver;
-  mapping (address => UserCollateral) public userCollateral;
 
+  // user => erc20 address => collateral struct
+  mapping (address => mapping (address => UserCollateral)) public userCollateral;
   constructor (
     IEAS eas,
     address _validator
@@ -42,10 +46,6 @@ contract TrustedValidatorResolver is SchemaResolver {
     sellCollateralResolver = _sellCollateralResolver;
   }
 
-
-  function isPayable() public pure override returns (bool) {
-    return true;
-  }
 
   function onAttest(
     Attestation calldata attestation,
@@ -98,9 +98,10 @@ contract TrustedValidatorResolver is SchemaResolver {
 
   function addCollateral(
     address user,
+    address paymentToken,
     uint256 collateral
   ) public payable onlyResolvers {
-    userCollateral[user].lockedCollateral += collateral;
+    userCollateral[user][paymentToken].lockedCollateral += collateral;
   }
 }
 
