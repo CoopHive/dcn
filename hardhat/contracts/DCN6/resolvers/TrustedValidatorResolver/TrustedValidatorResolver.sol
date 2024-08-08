@@ -11,12 +11,16 @@ import { IERC20  } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20  } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract TrustedValidatorResolver is SchemaResolver {
+  using SafeERC20 for IERC20;
+  error InvalidAllowance();
+
   address validator; 
   address buyCollateralResolver;
   address sellCollateralResolver;
 
   // user => erc20 address => collateral struct
   mapping (address => mapping (address => UserCollateral)) public userCollateral;
+
   constructor (
     IEAS eas,
     address _validator
@@ -63,28 +67,43 @@ contract TrustedValidatorResolver is SchemaResolver {
     );
     (
       uint256 collateral,
+      /*address sellerValidator*/
     ) = abi.decode(
-      sellerAttestation.data,
+      attestation.data,
       (uint256, address)
     );
     Attestation memory buyerAttestation = _eas.getAttestation(
       sellerAttestation.refUID
     );
 
-    (
-      uint256 amount,
-      ,
-      ,
+    ( /*address supplier*/,
+      uint256 jobCost,
+      address paymentToken,
+      /*uint256 creditsRequested*/,
+      /*uint256 collateralRequested*/,
+      /*address validator*/,
+      /*uint256 offerDeadline*/,
+      /*uint256 jobDeadline*/,
+      uint256 arbitrationDeadline
     ) = abi.decode(
-      buyerAttestation.data,
-      (uint256, uint256, address, uint256)
+    buyerAttestation.data,
+    (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
     );
 
     if (isApproved) {
-      payable(sellerAttestation.recipient).transfer(amount + collateral);      
+      // Reward and Collateral Refund
+      IERC20(paymentToken).transfer(
+        sellerAttestation.recipient,
+        jobCost + collateral
+      );
     } else {
-      payable(buyerAttestation.recipient).transfer(amount + collateral);
-  }
+      // Refund and get collateral
+      IERC20(paymentToken).transfer(
+        buyerAttestation.recipient,
+        jobCost + collateral
+      );
+    }
+
     return true;
   }
 

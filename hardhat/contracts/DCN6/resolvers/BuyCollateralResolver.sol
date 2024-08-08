@@ -31,6 +31,7 @@ contract BuyCollateralResolver is SchemaResolver {
     Attestation calldata attestation,
     uint256 /*value*/
   ) internal override returns (bool) {
+    console.logBytes32(attestation.uid);
     ( address supplier,
       uint256 jobCost,
       address paymentToken,

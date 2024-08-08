@@ -7,7 +7,7 @@ import hre from "hardhat";
 import { getAddress, parseGwei, getContract } from "viem";
 import { WalletClient, PublicClient  } from "@nomicfoundation/hardhat-viem/types";
 //import EASJson from '../external/EAS.json';
-import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32 } from '@ethereum-attestation-service/eas-sdk';
+import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32, getUID } from '@ethereum-attestation-service/eas-sdk';
 
 type BuyMessage  = [
   supplier: {name: string, value: any, type: string},
@@ -19,6 +19,11 @@ type BuyMessage  = [
   offerDeadline: {name: string, value: any, type: string},
   jobDeadline: {name: string, value: any, type: string},
   arbitrationDeadline: {name: string, value: any, type: string}
+]
+
+type SellMessage = [
+  collateral: {name: string, value: any, type: string},
+  validator: {name: string, value: any, type: string}
 ]
 
 describe("DCN6", function () {
@@ -40,11 +45,15 @@ describe("DCN6", function () {
   let buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, address validator, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
   let buySchemaUID: `0x${string}`;
 
+
+  let sellResolverAddress: `0x${string}`;
   let sellSchema: string = "uint256 collateral, address validator"
   let sellSchemaUID: `0x${string}`;
 
   let validatorSchema: string = "bool isApproved"
   let validatorSchemaUID: `0x${string}`;
+
+  let buyAttestation: `0x${string}`;
 
   before(async () => {
     publicClient = await hre.viem.getPublicClient();
@@ -73,6 +82,7 @@ describe("DCN6", function () {
       "SellCollateralResolver",
       [eas.address, trustedValidatorResolver.address]
     );
+    sellResolverAddress = sellResolver.address;
 
     await trustedValidatorResolver.write.setBuyCollateralResolver([buyResolver.address]);
     await trustedValidatorResolver.write.setSellCollateralResolver([sellResolver.address]);
@@ -99,6 +109,7 @@ describe("DCN6", function () {
   }) 
 
   it("Buyer should deposit collateral", async function () {
+    console.log(await publicClient.getBlockNumber())
     await erc20.write.mint([buyer.account.address, 100n]);
 
     const erc20Buyer = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: buyer} });
@@ -116,13 +127,10 @@ describe("DCN6", function () {
       {name: 'jobDeadline', value: (await publicClient.getBlockNumber()) + 3600n, type: 'uint256'},
       {name: 'arbitrationDeadline', value: (await publicClient.getBlockNumber()) + 7200n, type: 'uint256'}
     ]
-    console.log('buyMessage', buyMessage)
     const buySchemaEncoder = new SchemaEncoder(buySchema)
     const encodedData = buySchemaEncoder.encodeData(buyMessage)
     const balance = await publicClient.getBalance({address: buyer.account.address})
-    console.log('balance', balance)
-    console.log('buySchemaUID', buySchemaUID)
-    await eas.write.attest([
+    const hash = await eas.write.attest([
       { 
         schema: buySchemaUID,
         data: {
@@ -136,13 +144,50 @@ describe("DCN6", function () {
       }
     ])
 
-  
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    buyAttestation = receipt.logs[0].data
+     console.log('buyAttestation', buyAttestation)
     
-    
+
+   const attestation = await eas.read.getAttestation([buyAttestation])
+   console.log('attestation', attestation)
+
     //expect(await lock.read.unlockTime()).to.equal(unlockTime);
   });
 
   it("Seller should reference buyers bid for them", async function () {
+    console.log(await publicClient.getBlockNumber())
+    await erc20.write.mint([seller.account.address, 100n]);
+    
+    const erc20Seller = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: seller} });
+    await erc20Seller.write.approve([sellResolverAddress, 100n]);
+
+    const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: seller} });
+    const sellMessage: SellMessage = [
+      {name: 'collateral', value: 100n, type: 'uint256'},
+      {name: 'validator', value: validator.account.address, type: 'address'},
+    ]
+    console.log('sellMessage', sellMessage)
+
+    const sellSchemaEncoder = new SchemaEncoder(sellSchema)
+    const encodedData = sellSchemaEncoder.encodeData(sellMessage)
+
+    await eas.write.attest([
+      { 
+        schema: sellSchemaUID,
+        data: {
+          recipient: seller.account.address,
+          expirationTime: NO_EXPIRATION,
+          revocable: true,
+          refUID: buyAttestation,
+          data: encodedData as `0x${string}`,
+          value: 0n
+        }
+      }
+    ])
+
+
+
 
     //expect(await lock.read.owner()).to.equal(
     // getAddress(owner.account.address)

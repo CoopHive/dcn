@@ -25,6 +25,7 @@ contract SellCollateralResolver is SchemaResolver {
     Attestation calldata attestation,
     uint256 /*value*/
   ) internal override returns (bool) {
+    console.log('hi');
     (
       uint256 collateral,
       address sellerValidator
@@ -32,10 +33,13 @@ contract SellCollateralResolver is SchemaResolver {
       attestation.data,
       (uint256, address)
     );
+    console.log('decoded');
 
     Attestation memory buyerAttestation = _eas.getAttestation(
       attestation.refUID
     );
+    console.log('buyUID');
+
 
     ( address supplier,
       /*uint256 jobCost*/,
@@ -47,9 +51,10 @@ contract SellCollateralResolver is SchemaResolver {
       uint256 jobDeadline,
       uint256 arbitrationDeadline
     ) = abi.decode(
-    attestation.data,
+    buyerAttestation.data,
     (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
     );
+    console.log('buyAttestation decoded');
     require(collateral == collateralRequested, "Collateral mismatch");
 
     require(block.number < offerDeadline, "Offer Deadline expired");
