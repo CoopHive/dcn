@@ -1,46 +1,56 @@
-import { Kysely, PostgresDialect } from "kysely";
-import { type DB } from "kysely-codegen";
-import { Pool } from "pg";
-import { createPublicClient, http } from "viem";
-import { anvil } from "viem/chains";
+import type { BuyerMessage, SellerMessage } from './message-schema.ts';
+import { producer, consumer } from './kafka-config.ts';
 
-const { Kafka } = require("kafkajs");
+// Function to handle offers from buyers
+export const onOffer = async (offer: BuyerMessage): Promise<SellerMessage> => {
+  // Implement your negotiation logic here. Added a dummy negotiation that will increase price by 10 units.
+  console.log('Received offer for negotiation:', offer);
 
-const kafka = new Kafka({
-  clientId: "resource-provider",
-  brokers: ["localhost:9092"],
-});
+  const negotiatedOffer: SellerMessage = {
+    offerId: offer.offerId,
+    credits: offer.credits,
+    provider: offer.provider,
+    price: offer.price + 10,
+  };
 
-const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: "resource-provider" });
+  console.log('Negotiated offer:', negotiatedOffer);
+  return negotiatedOffer;
+};
 
-const client = createPublicClient({
-  chain: anvil,
-  transport: http(),
-});
+// Function for the seller to fulfill an offer
+export const fulfillOffer = async (offer: SellerMessage): Promise<void> => {
+  console.log('Fulfilling offer:', offer);
+  await producer.connect();
+  await producer.send({
+    topic: 'seller-responses',
+    messages: [{ value: JSON.stringify(offer) }],
+  });
+  console.log('Fulfilled offer sent:', offer);
+  await producer.disconnect();
+};
 
-const db = new Kysely<DB>({
-  dialect: new PostgresDialect({
-    pool: new Pool({
-      database: "dvd_credits",
-      host: "localhost",
-    }),
-  }),
-});
+// Consumer to listen to buyer offers
+const listenForOffers = async () => {
+  await consumer.connect();
+  await consumer.subscribe({ topic: 'buyer-offers', fromBeginning: true });
 
-await consumer.connect();
-await consumer.subscribe({ topic: "buy-credits", fromBeginning: false });
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      if (!message.value) {
+        console.error('Received message with null value');
+        return;
+      }
 
-await consumer.run({
-  eachMessage: async ({ topic, partition, message }) => {
-    // listen for request-credits message
-    // respond with ok-request message
-    // listen for bid-submitted message
-    // claim collateral from on-chain (listen for validation event on-chain first)
-    // submit ask on-chain & register credits in db
-    // reply with ask-submitted message
-    console.log({
-      value: message.value.toString(),
-    });
-  },
-});
+      const offer: BuyerMessage = JSON.parse(message.value.toString());
+      console.log('Received buyer offer:', offer);
+
+      // Handle negotiation
+      const negotiatedOffer = await onOffer(offer);
+
+      // Fulfill the offer
+      await fulfillOffer(negotiatedOffer);
+    },
+  });
+};
+
+listenForOffers().catch(console.error);

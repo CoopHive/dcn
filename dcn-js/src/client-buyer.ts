@@ -1,35 +1,48 @@
-import { createPublicClient, http } from "viem";
-import { anvil } from "viem/chains";
+import type { BuyerMessage } from './message-schema';
+import { producer, consumer } from './kafka-config';
 
-const { Kafka } = require("kafkajs");
-
-const kafka = new Kafka({
-  clientId: "buyer",
-  brokers: ["localhost:9092"],
-});
-const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: "buyer" });
-
-const client = createPublicClient({
-  chain: anvil,
-  transport: http(),
-});
-
-async function buyCredits() {
+// Function for the buyer to make an offer
+export const makeOffer = async (offer: BuyerMessage): Promise<void> => {
   await producer.connect();
-  // send request-credits message
   await producer.send({
-    topic: "buy-credits",
-    messages: [{ value: "Buy 200 credits" }],
+    topic: 'buyer-offers',
+    messages: [{ value: JSON.stringify(offer) }],
   });
-
-  // listen for ok-request message
-  // deposit collateral on-chain
-  // send bid-submitted message
-  // listen for ask-submitted message
-  // check on-chain to confirm, reclaim collateral if invalid or non-existent
-
+  console.log('Offer sent:', offer);
   await producer.disconnect();
-}
+};
 
-await buyCredits();
+// Consumer to listen to responses from sellers
+const listenForResponses = async (responseTopic: string) => {
+  await consumer.connect();
+  await consumer.subscribe({ topic: responseTopic, fromBeginning: true });
+
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      if (!message.value) {
+        console.error('Received message with null value');
+        return;
+      }
+
+      const response: BuyerMessage = JSON.parse(message.value.toString());
+      console.log('Received seller response:', response);
+    },
+  });
+};
+
+// Example usage: Buyer sends an offer and listens for responses
+const runBuyerClient = async () => {
+  const initialOffer: BuyerMessage = {
+    offerId: '123',
+    credits: 'abc123',
+    provider: 'ProviderName',
+    price: 100,
+    deposit_attestation: 'some_attestation',
+    responseTopic: 'seller-responses',
+  };
+
+  await makeOffer(initialOffer);
+  await listenForResponses(initialOffer.responseTopic);
+};
+
+runBuyerClient().catch(console.error);
