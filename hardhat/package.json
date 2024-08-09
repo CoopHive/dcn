@@ -1,7 +1,8 @@
 {
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
-    "hardhat": "^2.22.8"
+    "hardhat": "^2.22.8",
+    "hardhat-deploy": "^0.12.4"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-contracts": "^1.7.1",

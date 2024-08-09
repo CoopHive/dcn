@@ -118,6 +118,7 @@ contract TrustedValidatorResolver is SchemaResolver {
     address paymentToken,
     uint256 collateral
   ) public payable onlyResolvers {
+
     userCollateral[user][paymentToken].lockedCollateral += collateral;
   }
 }

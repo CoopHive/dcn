@@ -15,7 +15,6 @@ type BuyMessage  = [
   paymentToken: {name: string, value: any, type: string},
   creditsRequested: {name: string, value: any, type: string},
   collateralRequested: {name: string, value: any, type: string},
-  //validator: {name: string, value: any, type: string},
   offerDeadline: {name: string, value: any, type: string},
   jobDeadline: {name: string, value: any, type: string},
   arbitrationDeadline: {name: string, value: any, type: string}
@@ -23,7 +22,6 @@ type BuyMessage  = [
 
 type SellMessage = [
   collateral: {name: string, value: any, type: string},
-  //validator: {name: string, value: any, type: string}
 ]
 
 type ValidationMessage = [
@@ -140,7 +138,7 @@ describe("DCN6", function () {
         data: {
           recipient: buyer.account.address,
           expirationTime: NO_EXPIRATION,
-          revocable: false,
+          revocable: true,
           refUID: ZERO_BYTES32,
           data: encodedData as `0x${string}`,
           value: 0n
