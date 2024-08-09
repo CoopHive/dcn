@@ -66,11 +66,10 @@ contract TrustedValidatorResolver is SchemaResolver {
       attestation.refUID
     );
     (
-      uint256 collateral,
-      /*address sellerValidator*/
+      uint256 collateral
     ) = abi.decode(
-      attestation.data,
-      (uint256, address)
+      sellerAttestation.data,
+      (uint256)
     );
     Attestation memory buyerAttestation = _eas.getAttestation(
       sellerAttestation.refUID
@@ -81,13 +80,12 @@ contract TrustedValidatorResolver is SchemaResolver {
       address paymentToken,
       /*uint256 creditsRequested*/,
       /*uint256 collateralRequested*/,
-      /*address validator*/,
       /*uint256 offerDeadline*/,
       /*uint256 jobDeadline*/,
       uint256 arbitrationDeadline
     ) = abi.decode(
     buyerAttestation.data,
-    (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
+    (address, uint256, address, uint256, uint256, uint256, uint256, uint256)
     );
 
     if (isApproved) {

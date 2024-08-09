@@ -37,16 +37,15 @@ contract BuyCollateralResolver is SchemaResolver {
       address paymentToken,
       uint256 creditsRequested,
       uint256 collateralRequested,
-      address validator,
       uint256 offerDeadline,
       uint256 jobDeadline,
       uint256 arbitrationDeadline
     ) = abi.decode(
     attestation.data,
-    (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
+    (address, uint256, address, uint256, uint256, uint256, uint256, uint256)
     );
     //require(block.number < deadline, "Invalid deadline");
-    IERC20(paymentToken).transferFrom(attestation.recipient, validator, jobCost);
+    IERC20(paymentToken).transferFrom(attestation.recipient, address(validatorResolver), jobCost);
     validatorResolver.addCollateral(attestation.recipient, paymentToken, jobCost);
     //payable(address(validatorResolver)).transfer(amount);
     console.log("Attested");

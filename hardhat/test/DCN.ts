@@ -15,7 +15,7 @@ type BuyMessage  = [
   paymentToken: {name: string, value: any, type: string},
   creditsRequested: {name: string, value: any, type: string},
   collateralRequested: {name: string, value: any, type: string},
-  validator: {name: string, value: any, type: string},
+  //validator: {name: string, value: any, type: string},
   offerDeadline: {name: string, value: any, type: string},
   jobDeadline: {name: string, value: any, type: string},
   arbitrationDeadline: {name: string, value: any, type: string}
@@ -23,7 +23,11 @@ type BuyMessage  = [
 
 type SellMessage = [
   collateral: {name: string, value: any, type: string},
-  validator: {name: string, value: any, type: string}
+  //validator: {name: string, value: any, type: string}
+]
+
+type ValidationMessage = [
+  isApproved: {name: string, value: any, type: string}
 ]
 
 describe("DCN6", function () {
@@ -42,18 +46,19 @@ describe("DCN6", function () {
   const schemaRegistryAddress: `0x${string}` = '0xA7b39296258348C78294F95B872b282326A97BDF'
 
   let buyResolverAddress: `0x${string}`;
-  let buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, address validator, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
+  let buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
   let buySchemaUID: `0x${string}`;
 
 
   let sellResolverAddress: `0x${string}`;
-  let sellSchema: string = "uint256 collateral, address validator"
+  let sellSchema: string = "uint256 collateral"
   let sellSchemaUID: `0x${string}`;
 
   let validatorSchema: string = "bool isApproved"
   let validatorSchemaUID: `0x${string}`;
 
   let buyAttestation: `0x${string}`;
+  let sellAttestation: `0x${string}`;
 
   before(async () => {
     publicClient = await hre.viem.getPublicClient();
@@ -122,7 +127,6 @@ describe("DCN6", function () {
       {name: 'paymentToken', value: erc20.address, type: 'address'},
       {name: 'creditsRequested', value: 100n, type: 'uint256'},
       {name: 'collateralRequested', value: 100n, type: 'uint256'},
-      {name: 'validator', value: validator.account.address, type: 'address'},
       {name: 'offerDeadline', value: (await publicClient.getBlockNumber()) + 1800n, type: 'uint256'},
       {name: 'jobDeadline', value: (await publicClient.getBlockNumber()) + 3600n, type: 'uint256'},
       {name: 'arbitrationDeadline', value: (await publicClient.getBlockNumber()) + 7200n, type: 'uint256'}
@@ -164,15 +168,14 @@ describe("DCN6", function () {
 
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: seller} });
     const sellMessage: SellMessage = [
-      {name: 'collateral', value: 100n, type: 'uint256'},
-      {name: 'validator', value: validator.account.address, type: 'address'},
+      {name: 'collateral', value: 100n, type: 'uint256'}
     ]
     console.log('sellMessage', sellMessage)
 
     const sellSchemaEncoder = new SchemaEncoder(sellSchema)
     const encodedData = sellSchemaEncoder.encodeData(sellMessage)
 
-    await eas.write.attest([
+    const hash = await eas.write.attest([
       { 
         schema: sellSchemaUID,
         data: {
@@ -185,6 +188,8 @@ describe("DCN6", function () {
         }
       }
     ])
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    sellAttestation = receipt.logs[0].data
 
 
 
@@ -195,6 +200,31 @@ describe("DCN6", function () {
   });
 
   it("Validator should trigger and fill collateral accounts", async function () {
+
+    const validationMessage: ValidationMessage = [
+      {name: 'isApproved', value: true, type: 'bool'},
+    ]
+
+    const validationSchemaEncoder = new SchemaEncoder(validatorSchema)
+    const encodedData = validationSchemaEncoder.encodeData(validationMessage)
+
+
+    const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: validator} });
+    await eas.write.attest([
+      { 
+        schema: validatorSchemaUID,
+        data: {
+          recipient: validator.account.address,
+          expirationTime: NO_EXPIRATION,
+          revocable: false,
+          refUID: sellAttestation,
+          data: encodedData as `0x${string}`,
+          value: 0n
+        }
+      }
+    ])
+
+
     /*
        expect(
        await publicClient.getBalance({

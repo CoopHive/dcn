@@ -27,11 +27,10 @@ contract SellCollateralResolver is SchemaResolver {
   ) internal override returns (bool) {
     console.log('hi');
     (
-      uint256 collateral,
-      address sellerValidator
+      uint256 collateral
     ) = abi.decode(
       attestation.data,
-      (uint256, address)
+      (uint256)
     );
     console.log('decoded');
 
@@ -46,13 +45,12 @@ contract SellCollateralResolver is SchemaResolver {
       address paymentToken,
       /*uint256 creditsRequested*/,
       uint256 collateralRequested,
-      address buyerValidator,
       uint256 offerDeadline,
       uint256 jobDeadline,
       uint256 arbitrationDeadline
     ) = abi.decode(
     buyerAttestation.data,
-    (address, uint256, address, uint256, uint256, address, uint256, uint256, uint256)
+    (address, uint256, address, uint256, uint256, uint256, uint256, uint256)
     );
     console.log('buyAttestation decoded');
     require(collateral == collateralRequested, "Collateral mismatch");
@@ -61,9 +59,7 @@ contract SellCollateralResolver is SchemaResolver {
     require(offerDeadline < jobDeadline, "Job must finish after offer");
     require(jobDeadline < arbitrationDeadline, "Arbitration must finish after job");
 
-    require(buyerValidator == sellerValidator, "same validator for now");
-
-    IERC20(paymentToken).transferFrom(attestation.recipient, sellerValidator, collateral);
+    IERC20(paymentToken).transferFrom(attestation.recipient, address(validatorResolver), collateral);
     validatorResolver.addCollateral(attestation.recipient, paymentToken, collateral);
     
     return true;
