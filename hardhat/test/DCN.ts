@@ -8,25 +8,14 @@ import { getAddress, parseGwei, getContract } from "viem";
 import { WalletClient, PublicClient  } from "@nomicfoundation/hardhat-viem/types";
 //import EASJson from '../external/EAS.json';
 import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32, getUID } from '@ethereum-attestation-service/eas-sdk';
-
-type BuyMessage  = [
-  supplier: {name: string, value: any, type: string},
-  jobCost: {name: string, value: any, type: string},
-  paymentToken: {name: string, value: any, type: string},
-  creditsRequested: {name: string, value: any, type: string},
-  collateralRequested: {name: string, value: any, type: string},
-  offerDeadline: {name: string, value: any, type: string},
-  jobDeadline: {name: string, value: any, type: string},
-  arbitrationDeadline: {name: string, value: any, type: string}
-]
-
-type SellMessage = [
-  collateral: {name: string, value: any, type: string},
-]
-
-type ValidationMessage = [
-  isApproved: {name: string, value: any, type: string}
-]
+import { 
+  createBuyAttestation,
+  createSellAttestation,
+  createValidationAttestation,
+  buySchema,
+  sellSchema,
+  validationSchema
+} from "coophive-sdk"
 
 describe("DCN6", function () {
   let publicClient: PublicClient;
@@ -44,16 +33,13 @@ describe("DCN6", function () {
   const schemaRegistryAddress: `0x${string}` = '0xA7b39296258348C78294F95B872b282326A97BDF'
 
   let buyResolverAddress: `0x${string}`;
-  let buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
   let buySchemaUID: `0x${string}`;
 
 
   let sellResolverAddress: `0x${string}`;
-  let sellSchema: string = "uint256 collateral"
   let sellSchemaUID: `0x${string}`;
 
-  let validatorSchema: string = "bool isApproved"
-  let validatorSchemaUID: `0x${string}`;
+  let validationSchemaUID: `0x${string}`;
 
   let buyAttestation: `0x${string}`;
   let sellAttestation: `0x${string}`;
@@ -64,7 +50,7 @@ describe("DCN6", function () {
     // Mock ERC20
     erc20 = await hre.viem.deployContract("ERC20Mock", [], {client: {wallet: deployer}});
     erc20Address = erc20.address;
-    
+
     // EAS
     const schemaRegistry = await hre.viem.getContractAt("ISchemaRegistry", schemaRegistryAddress);
     const eas = await hre.viem.getContractAt("IEAS", easAddress);
@@ -92,6 +78,7 @@ describe("DCN6", function () {
 
     let hash = await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
     let receipt = await publicClient.waitForTransactionReceipt({ hash });
+    console.log('receipt', receipt);
     buySchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
     console.log('buySchemaUID', buySchemaUID); 
 
@@ -100,10 +87,10 @@ describe("DCN6", function () {
     sellSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
     console.log('sellSchemaUID', sellSchemaUID);
 
-    hash = await schemaRegistry.write.register([validatorSchema, trustedValidatorResolver.address, true]);
+    hash = await schemaRegistry.write.register([validationSchema, trustedValidatorResolver.address, true]);
     receipt = await publicClient.waitForTransactionReceipt({ hash });
-    validatorSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
-    console.log('validatorSchemaUID', validatorSchemaUID);
+    validationSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
+    console.log('validationSchemaUID', validationSchemaUID);
 
 
 
@@ -119,40 +106,30 @@ describe("DCN6", function () {
     await erc20Buyer.write.approve([buyResolverAddress, 100n]);
 
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: buyer} });
-    const buyMessage: BuyMessage = [
-      {name: 'supplier', value: buyer.account.address, type: 'address'},
-      {name: 'jobCost', value: 100n, type: 'uint256'},
-      {name: 'paymentToken', value: erc20.address, type: 'address'},
-      {name: 'creditsRequested', value: 100n, type: 'uint256'},
-      {name: 'collateralRequested', value: 100n, type: 'uint256'},
-      {name: 'offerDeadline', value: (await publicClient.getBlockNumber()) + 1800n, type: 'uint256'},
-      {name: 'jobDeadline', value: (await publicClient.getBlockNumber()) + 3600n, type: 'uint256'},
-      {name: 'arbitrationDeadline', value: (await publicClient.getBlockNumber()) + 7200n, type: 'uint256'}
-    ]
-    const buySchemaEncoder = new SchemaEncoder(buySchema)
-    const encodedData = buySchemaEncoder.encodeData(buyMessage)
+
     const balance = await publicClient.getBalance({address: buyer.account.address})
     const hash = await eas.write.attest([
-      { 
-        schema: buySchemaUID,
-        data: {
-          recipient: buyer.account.address,
-          expirationTime: NO_EXPIRATION,
-          revocable: true,
-          refUID: ZERO_BYTES32,
-          data: encodedData as `0x${string}`,
-          value: 0n
-        }
-      }
+      createBuyAttestation({
+        schemaUID: buySchemaUID,
+        demander: buyer.account.address,
+        supplier: buyer.account.address, 
+        jobCost: 100n,
+        paymentToken: erc20.address,
+        creditsRequested: 100n,
+        collateralRequested: 100n,
+        offerDeadline: (await publicClient.getBlockNumber()) + 1800n,
+        jobDeadline: (await publicClient.getBlockNumber()) + 3600n,
+        arbitrationDeadline: (await publicClient.getBlockNumber()) + 7200n
+      })
     ])
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     buyAttestation = receipt.logs[0].data
-     console.log('buyAttestation', buyAttestation)
-    
+    console.log('buyAttestation', buyAttestation)
 
-   const attestation = await eas.read.getAttestation([buyAttestation])
-   console.log('attestation', attestation)
+
+    const attestation = await eas.read.getAttestation([buyAttestation])
+    console.log('attestation', attestation)
 
     //expect(await lock.read.unlockTime()).to.equal(unlockTime);
   });
@@ -160,87 +137,35 @@ describe("DCN6", function () {
   it("Seller should reference buyers bid for them", async function () {
     console.log(await publicClient.getBlockNumber())
     await erc20.write.mint([seller.account.address, 100n]);
-    
+
     const erc20Seller = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: seller} });
     await erc20Seller.write.approve([sellResolverAddress, 100n]);
 
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: seller} });
-    const sellMessage: SellMessage = [
-      {name: 'collateral', value: 100n, type: 'uint256'}
-    ]
-    console.log('sellMessage', sellMessage)
-
-    const sellSchemaEncoder = new SchemaEncoder(sellSchema)
-    const encodedData = sellSchemaEncoder.encodeData(sellMessage)
 
     const hash = await eas.write.attest([
-      { 
-        schema: sellSchemaUID,
-        data: {
-          recipient: seller.account.address,
-          expirationTime: NO_EXPIRATION,
-          revocable: true,
-          refUID: buyAttestation,
-          data: encodedData as `0x${string}`,
-          value: 0n
-        }
-      }
+      createSellAttestation({
+        schemaUID: sellSchemaUID,
+        seller: seller.account.address,
+        collateral: 100n,
+        buyRefUID: buyAttestation
+      })
     ])
+
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     sellAttestation = receipt.logs[0].data
-
-
-
-
-    //expect(await lock.read.owner()).to.equal(
-    // getAddress(owner.account.address)
-    //);
+    console.log('sellAttestation', sellAttestation)
   });
 
   it("Validator should trigger and fill collateral accounts", async function () {
-
-    const validationMessage: ValidationMessage = [
-      {name: 'isApproved', value: true, type: 'bool'},
-    ]
-
-    const validationSchemaEncoder = new SchemaEncoder(validatorSchema)
-    const encodedData = validationSchemaEncoder.encodeData(validationMessage)
-
-
     const eas = await hre.viem.getContractAt("IEAS", easAddress, { client: {wallet: validator} });
     await eas.write.attest([
-      { 
-        schema: validatorSchemaUID,
-        data: {
-          recipient: validator.account.address,
-          expirationTime: NO_EXPIRATION,
-          revocable: false,
-          refUID: sellAttestation,
-          data: encodedData as `0x${string}`,
-          value: 0n
-        }
-      }
+      createValidationAttestation({
+        schemaUID: validationSchemaUID,
+        validator: validator.account.address,
+        isApproved: true,
+        sellRefUID: sellAttestation
+      })
     ])
-
-
-    /*
-       expect(
-       await publicClient.getBalance({
-address: lock.address,
-})
-).to.equal(lockedAmount);
-     */
-  });
-
-  it("Seller should be able to collect purchase price and collateral", async function () {
-    // We don't use the fixture here because we want a different deployment
-    /*
-       const latestTime = BigInt(await time.latest());
-       await expect(
-       hre.viem.deployContract("Lock", [latestTime], {
-value: 1n,
-})
-).to.be.rejectedWith("Unlock time should be in the future");
-     */
   });
 });
