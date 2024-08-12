@@ -7,14 +7,23 @@ import hre from "hardhat";
 import { getAddress, parseGwei, getContract } from "viem";
 import { WalletClient, PublicClient  } from "@nomicfoundation/hardhat-viem/types";
 //import EASJson from '../external/EAS.json';
-import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32, getUID } from '@ethereum-attestation-service/eas-sdk';
+import {
+  SchemaEncoder,
+  NO_EXPIRATION,
+  ZERO_ADDRESS,
+  ZERO_BYTES32,
+  getUID,
+  OffchainConfig,
+  OffchainAttestationVersion,
+  Offchain } from '@ethereum-attestation-service/eas-sdk';
 import { 
   createBuyAttestation,
   createSellAttestation,
   createValidationAttestation,
   buySchema,
   sellSchema,
-  validationSchema
+  validationSchema,
+  signOffchainBuyMessage,
 } from "coophive-sdk"
 
 describe("DCN6", function () {
@@ -78,28 +87,53 @@ describe("DCN6", function () {
 
     let hash = await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
     let receipt = await publicClient.waitForTransactionReceipt({ hash });
-    console.log('receipt', receipt);
     buySchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
-    console.log('buySchemaUID', buySchemaUID); 
 
     hash = await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
     receipt = await publicClient.waitForTransactionReceipt({ hash });
     sellSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
-    console.log('sellSchemaUID', sellSchemaUID);
 
     hash = await schemaRegistry.write.register([validationSchema, trustedValidatorResolver.address, true]);
     receipt = await publicClient.waitForTransactionReceipt({ hash });
     validationSchemaUID = receipt.logs[0].topics[1] as `0x${string}`;
-    console.log('validationSchemaUID', validationSchemaUID);
-
-
-
 
 
   }) 
 
+  it("Buyer can create an offchain Buy message", async function () {
+    const offchainAttestation = await signOffchainBuyMessage(
+      easAddress,
+      buyer,
+      {
+        schemaUID: buySchemaUID,
+        demander: buyer.account.address,
+        data: {
+          supplier: buyer.account.address, 
+          jobCost: 100n,
+          paymentToken: erc20.address,
+          creditsRequested: 100n,
+          collateralRequested: 100n,
+          offerDeadline: (await publicClient.getBlockNumber()) + 1800n,
+          jobDeadline: (await publicClient.getBlockNumber()) + 3600n,
+          arbitrationDeadline: (await publicClient.getBlockNumber()) + 7200n
+        }
+      }
+    )
+    const EAS_CONFIG: OffchainConfig = {
+      address: offchainAttestation.sig.domain.verifyingContract,
+      version: offchainAttestation.sig.domain.version,
+      chainId: offchainAttestation.sig.domain.chainId,
+
+    };
+    const offchain = new Offchain(EAS_CONFIG, OffchainAttestationVersion.Version2);
+    const isValidAttestation = offchain.verifyOffchainAttestationSignature(
+      offchainAttestation.signer,
+      offchainAttestation.sig
+
+    );
+  })
+
   it("Buyer should deposit collateral", async function () {
-    console.log(await publicClient.getBlockNumber())
     await erc20.write.mint([buyer.account.address, 100n]);
 
     const erc20Buyer = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: buyer} });
@@ -125,17 +159,14 @@ describe("DCN6", function () {
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     buyAttestation = receipt.logs[0].data
-    console.log('buyAttestation', buyAttestation)
 
 
     const attestation = await eas.read.getAttestation([buyAttestation])
-    console.log('attestation', attestation)
 
     //expect(await lock.read.unlockTime()).to.equal(unlockTime);
   });
 
   it("Seller should reference buyers bid for them", async function () {
-    console.log(await publicClient.getBlockNumber())
     await erc20.write.mint([seller.account.address, 100n]);
 
     const erc20Seller = await hre.viem.getContractAt("IERC20", erc20.address, { client: {wallet: seller} });
@@ -154,7 +185,6 @@ describe("DCN6", function () {
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     sellAttestation = receipt.logs[0].data
-    console.log('sellAttestation', sellAttestation)
   });
 
   it("Validator should trigger and fill collateral accounts", async function () {
