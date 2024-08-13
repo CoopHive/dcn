@@ -24,6 +24,7 @@ import {
   sellSchema,
   validationSchema,
   signOffchainBuyMessage,
+  verifyOffchainBuyMessage,
 } from "coophive-sdk"
 
 describe("DCN6", function () {
@@ -100,7 +101,7 @@ describe("DCN6", function () {
 
   }) 
 
-  it("Buyer can create an offchain Buy message", async function () {
+  it("Buyer can create an offchain Buy message, seller can verify message", async function () {
     const offchainAttestation = await signOffchainBuyMessage(
       easAddress,
       buyer,
@@ -119,18 +120,15 @@ describe("DCN6", function () {
         }
       }
     )
-    const EAS_CONFIG: OffchainConfig = {
-      address: offchainAttestation.sig.domain.verifyingContract,
-      version: offchainAttestation.sig.domain.version,
-      chainId: offchainAttestation.sig.domain.chainId,
 
-    };
-    const offchain = new Offchain(EAS_CONFIG, OffchainAttestationVersion.Version2);
-    const isValidAttestation = offchain.verifyOffchainAttestationSignature(
-      offchainAttestation.signer,
-      offchainAttestation.sig
+    const verification = await verifyOffchainBuyMessage(
+      easAddress,
+      seller,
+      buyer.account.address,
+      offchainAttestation
+    )
 
-    );
+    console.log('verification', verification)
   })
 
   it("Buyer should deposit collateral", async function () {
