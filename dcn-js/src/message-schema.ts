@@ -1,29 +1,31 @@
-interface MessageRequestCredits {
-  _tag: "request-credits";
-  dealId: string;
-  publicKey: string;
-  amount: number;
+interface Offer {
+  _tag: "offer";
+  provider: `0x${string}`;
+  query: string;
+  price: [string, number];
 }
 
-interface MessageOkRequest {
-  _tag: "ok-request";
-  dealId: string;
-  publicKey: string;
-  amount: number;
+interface Cancel {
+  _tag: "cancel";
+  error?: string;
 }
 
-interface MessageOnChainBidSubmitted {
-  _tag: "bid-submitted";
-  dealId: string;
-  publicKey: string;
-  dealContract: string;
-  bidId: number;
+interface Attest {
+  _tag: "attest";
+  attestation: string;
 }
 
-interface MessageOnChainAskSubmitted {
-  _tag: "ask-submitted";
-  dealId: string;
-  publicKey: string;
-  dealContract: string;
-  askId: number;
-}
+type BuyerAttest = Attest & { offer: Omit<Offer, "_tag"> };
+type SellerAttest = Attest & { result: string };
+
+export type BuyerMessage = { offerId: string; responseTopic?: string } & (
+  | Offer
+  | Cancel
+  | BuyerAttest
+);
+
+export type SellerMessage = { offerId: string } & (
+  | Offer
+  | Cancel
+  | SellerAttest
+);

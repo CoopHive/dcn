@@ -1,35 +1,50 @@
-import { createPublicClient, http } from "viem";
-import { anvil } from "viem/chains";
+import type { BuyerMessage, SellerMessage } from './message-schema.ts';
+import { producer, consumer } from './kafka-config.ts';
 
-const { Kafka } = require("kafkajs");
-
-const kafka = new Kafka({
-  clientId: "buyer",
-  brokers: ["localhost:9092"],
-});
-const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: "buyer" });
-
-const client = createPublicClient({
-  chain: anvil,
-  transport: http(),
-});
-
-async function buyCredits() {
+export const makeOffer = async (offer: BuyerMessage): Promise<void> => {
   await producer.connect();
-  // send request-credits message
+
   await producer.send({
-    topic: "buy-credits",
-    messages: [{ value: "Buy 200 credits" }],
+    topic: 'buyer-offers',
+    messages: [{ value: JSON.stringify(offer) }],
   });
+  console.log('Offer sent:', offer);
 
-  // listen for ok-request message
-  // deposit collateral on-chain
-  // send bid-submitted message
-  // listen for ask-submitted message
-  // check on-chain to confirm, reclaim collateral if invalid or non-existent
+  if (offer.responseTopic) {
+    await consumer.connect();
+    await consumer.subscribe({ topic: offer.responseTopic, fromBeginning: true });
 
-  await producer.disconnect();
-}
+    await consumer.run({
+      eachMessage: async ({ message }) => {
+        if (!message.value) {
+          console.error('Received message with null value');
+          return;
+        }
 
-await buyCredits();
+        const response: SellerMessage = JSON.parse(message.value.toString());
+        console.log('Received seller response:', response);
+
+        if (response._tag === 'attest' && 'result' in response) {
+          await consumer.disconnect();
+          await producer.disconnect();
+          console.log('Deal finalized. Disconnected from Kafka.');
+        }
+      },
+    });
+  }
+};
+
+const runBuyerClient = async () => {
+  const initialOffer: BuyerMessage = {
+    offerId: '123',
+    provider: '0xabc123',
+    query: 'QueryData',
+    price: ['0xSomeAddress', 100],
+    _tag: 'offer',
+    responseTopic: 'seller-responses',
+  };
+
+  await makeOffer(initialOffer);
+};
+
+runBuyerClient().catch(console.error);
