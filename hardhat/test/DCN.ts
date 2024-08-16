@@ -144,14 +144,16 @@ describe("DCN6", function () {
       createBuyAttestation({
         schemaUID: buySchemaUID,
         demander: buyer.account.address,
-        supplier: buyer.account.address, 
-        jobCost: 100n,
-        paymentToken: erc20.address,
-        creditsRequested: 100n,
-        collateralRequested: 100n,
-        offerDeadline: (await publicClient.getBlockNumber()) + 1800n,
-        jobDeadline: (await publicClient.getBlockNumber()) + 3600n,
-        arbitrationDeadline: (await publicClient.getBlockNumber()) + 7200n
+        data: {
+          supplier: buyer.account.address, 
+          jobCost: 100n,
+          paymentToken: erc20.address,
+          creditsRequested: 100n,
+          collateralRequested: 100n,
+          offerDeadline: (await publicClient.getBlockNumber()) + 1800n,
+          jobDeadline: (await publicClient.getBlockNumber()) + 3600n,
+          arbitrationDeadline: (await publicClient.getBlockNumber()) + 7200n
+        }
       })
     ])
 
