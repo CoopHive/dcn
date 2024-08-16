@@ -1,48 +1,50 @@
-import type { BuyerMessage } from './message-schema';
-import { producer, consumer } from './kafka-config';
+import type { BuyerMessage, SellerMessage } from './message-schema.ts';
+import { producer, consumer } from './kafka-config.ts';
 
-// Function for the buyer to make an offer
 export const makeOffer = async (offer: BuyerMessage): Promise<void> => {
   await producer.connect();
+
   await producer.send({
     topic: 'buyer-offers',
     messages: [{ value: JSON.stringify(offer) }],
   });
   console.log('Offer sent:', offer);
-  await producer.disconnect();
+
+  if (offer.responseTopic) {
+    await consumer.connect();
+    await consumer.subscribe({ topic: offer.responseTopic, fromBeginning: true });
+
+    await consumer.run({
+      eachMessage: async ({ message }) => {
+        if (!message.value) {
+          console.error('Received message with null value');
+          return;
+        }
+
+        const response: SellerMessage = JSON.parse(message.value.toString());
+        console.log('Received seller response:', response);
+
+        if (response._tag === 'attest' && 'result' in response) {
+          await consumer.disconnect();
+          await producer.disconnect();
+          console.log('Deal finalized. Disconnected from Kafka.');
+        }
+      },
+    });
+  }
 };
 
-// Consumer to listen to responses from sellers
-const listenForResponses = async (responseTopic: string) => {
-  await consumer.connect();
-  await consumer.subscribe({ topic: responseTopic, fromBeginning: true });
-
-  await consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
-      if (!message.value) {
-        console.error('Received message with null value');
-        return;
-      }
-
-      const response: BuyerMessage = JSON.parse(message.value.toString());
-      console.log('Received seller response:', response);
-    },
-  });
-};
-
-// Example usage: Buyer sends an offer and listens for responses
 const runBuyerClient = async () => {
   const initialOffer: BuyerMessage = {
     offerId: '123',
-    credits: 'abc123',
-    provider: 'ProviderName',
-    price: 100,
-    deposit_attestation: 'some_attestation',
+    provider: '0xabc123',
+    query: 'QueryData',
+    price: ['0xSomeAddress', 100],
+    _tag: 'offer',
     responseTopic: 'seller-responses',
   };
 
   await makeOffer(initialOffer);
-  await listenForResponses(initialOffer.responseTopic);
 };
 
 runBuyerClient().catch(console.error);
