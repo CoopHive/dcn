@@ -3,7 +3,7 @@ import { getContract } from 'viem'
 import hre from 'hardhat';
 import EAS from '../external/EAS.json';
 import SchemaRegistry from '../external/SchemaRegistry.json';
-
+import { buySchema, sellSchema, validationSchema } from "coophive-sdk";
 export default async ({deployments}) => {
   const [ deployer ] = await hre.viem.getWalletClients();
   const {deploy} = deployments;
@@ -40,13 +40,10 @@ export default async ({deployments}) => {
     log: true
   })
 
-  let validatorSchema: string = "bool isApproved"
-  await schemaRegistry.write.register([validatorSchema, tvResolver.address, true]);
+  //await schemaRegistry.write.register([validationSchema, tvResolver.address, true]);
+  
+  //await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
 
-  const buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
-  await schemaRegistry.write.register([buySchema, buyResolver.address, true]);
-
-  let sellSchema: string = "uint256 collateral"
-  await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
+  //await schemaRegistry.write.register([sellSchema, sellResolver.address, true]);
 
 }

@@ -9,12 +9,12 @@ import { SchemaEncoder, NO_EXPIRATION, ZERO_ADDRESS, ZERO_BYTES32, getUID } from
 
 import {
   BuyMessage,
-  buySchema, 
+  //buySchema, 
   SellMessage,
-  sellSchema,
+  //sellSchema,
   ValidationMessage,
-  validatorSchema
-} from "./utils";
+  //validatorSchema
+} from "coophive-sdk";
 
 import BuyCollateralResolver from '../deployments/baseSepolia/BuyCollateralResolver.json';
 import SellCollateralResolver from '../deployments/baseSepolia/SellCollateralResolver.json';
@@ -24,9 +24,9 @@ async function main() {
 
   let erc20Addr: `0x${string}`;
 
-  let buyerSchemaUID: `0x${string}` = '0x5ab6e882c945d6d756ed93fff7ec7419fec64845cc0a480bfea2af053d685ee7'
-  let sellerSchemaUID: `0x${string}` = '0x06d7582e367e1ba8ceafd2e75d7c3f35c10ad488bdc79f18433ed4b18705b662'
-  let validatorSchemaUID: `0x${string}` = '0x9581c888ba04af2923f453471f58f2dc70a23ee765142714853a623c88d866cf' 
+  let buyerSchemaUID: `0x${string}` = '0x7674c84acee890ef03bdbe281853efce9a10afe427dbfb203577ff3137bd0349'
+  let validatorSchemaUID: `0x${string}` = '0xf91e3931e3cf85fc255a403e5ccec30d9d05fa7612ccad90eb9297d52d490979'
+  let sellerSchemaUID: `0x${string}` = '0x4d2b0cd74e4002985777098314337ba532d5784c745a6486c852753dbe7f262e' 
 
   //const easAddr: `0x${string}` = '0x4200000000000000000000000000000000000021'
   //const schemaRegistryAddr: `0x${string}` = '0x4200000000000000000000000000000000000020'

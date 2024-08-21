@@ -8,6 +8,8 @@ import BuyCollateralResolver from '../deployments/baseSepolia/BuyCollateralResol
 import SellCollateralResolver from '../deployments/baseSepolia/SellCollateralResolver.json';
 
 
+import { buySchema, sellSchema, validationSchema } from "coophive-sdk";
+
 async function main() {
   const [deployer] = await hre.viem.getWalletClients();
   const eas = await getContract({
@@ -21,13 +23,10 @@ async function main() {
     client: {wallet: deployer}
   });
 
-  let validatorSchema: string = "bool isApproved"
-  await schemaRegistry.write.register([validatorSchema, TrustedValidatorResolver.address, true]);
-  console.log(BuyCollateralResolver.address);
-  const buySchema: string = "address supplier, uint256 jobCost, address paymentToken, uint256 creditsRequested, uint256 collateralRequested, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
-  await schemaRegistry.write.register([buySchema, BuyCollateralResolver.address, false]);
+  //await schemaRegistry.write.register([validationSchema, TrustedValidatorResolver.address, true]);
+  //console.log(BuyCollateralResolver.address);
+  //await schemaRegistry.write.register([buySchema, BuyCollateralResolver.address, true]);
 
-  let sellSchema: string = "uint256 collateral"
   await schemaRegistry.write.register([sellSchema, SellCollateralResolver.address, true]);
 }
 
