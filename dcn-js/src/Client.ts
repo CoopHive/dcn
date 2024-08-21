@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import type { Producer, Consumer } from 'kafkajs';
 
-import type { PublicClient, WalletClient  } from 'viem'
+import type { PrivateKeyAccount, PublicClient, WalletClient  } from 'viem'
 import { createWalletClient, createPublicClient, webSocket, getContract } from 'viem'
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -13,14 +13,16 @@ import  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolve
 import  SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
 import  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
-//import type { BuyStruct, BuyParams } from 'coophive-sdk'
+import type { BuyStruct, BuyParams } from 'coophive-sdk'
 import { Offer,BuyerMessage, SellerMessage } from './message-schema.ts';
 
 import { 
   signOffchainBuyMessage,
   verifyOffchainBuyMessage,
+
 } from 'coophive-sdk'
 export class Client {
+  account: PrivateKeyAccount;
   publicClient: PublicClient;
   walletClient: WalletClient;
 
@@ -30,6 +32,11 @@ export class Client {
 
   producer: Producer;
   consumer: Consumer;
+
+  buyerSchemaUID: `0x${string}` = '0x7674c84acee890ef03bdbe281853efce9a10afe427dbfb203577ff3137bd0349'
+  validatorSchemaUID: `0x${string}` = '0xf91e3931e3cf85fc255a403e5ccec30d9d05fa7612ccad90eb9297d52d490979'
+  sellerSchemaUID: `0x${string}` = '0x4d2b0cd74e4002985777098314337ba532d5784c745a6486c852753dbe7f262e' 
+
 
   constructor({
     privateKey,
@@ -42,12 +49,14 @@ export class Client {
     producer: Producer;
     consumer: Consumer;
   }) {
+    this.account = privateKeyToAccount(privateKey);
+    
     this.publicClient = createPublicClient({
       chain: baseSepolia,
       transport: webSocket(rpcUrl),
     });
     this.walletClient = createWalletClient({
-      account: privateKeyToAccount(privateKey),
+      account: this.account,
       chain: baseSepolia,
       transport: webSocket(rpcUrl),
     });
@@ -75,13 +84,16 @@ export class Client {
     this.consumer = consumer;
   }
 
-  async proposeBuy(offer: BuyerMessage): Promise<void> {
+  async proposeDeal(offer: BuyerAttest): Promise<void> {
     this.producer.connect();
     try {
       const offchainAttestation = await signOffchainBuyMessage(
         EAS.addressBaseSepolia,
         this.walletClient,
-        offer
+        {
+          schemaUID: this.buyerSchemaUID,
+          demander: this.account.address
+          data: offer.buyData
       )
 
       await this.producer.send({
@@ -113,6 +125,7 @@ export class Client {
               )
 
               if (isValid) {
+                
                 // TODO: negotiate new paramets or accept
               }
             } catch (e) {

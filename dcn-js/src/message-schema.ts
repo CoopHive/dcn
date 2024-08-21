@@ -1,9 +1,9 @@
-import type { BuyParams } from "coophive-sdk";
+import type { BuyData } from "coophive-sdk";
 import type { SignedOffchainAttestation } from "@ethereum-attestation-service/eas-sdk";
 
 interface Offer {
   _tag: "offer";
-  buyParams: BuyParams;
+  buyParams: BuyData;
 }
 
 interface Cancel {
@@ -13,10 +13,10 @@ interface Cancel {
 
 interface Attest {
   _tag: "attest";
-  offchainAttestation: SignedOffchainAttestation
+  offchainAttestation?: SignedOffchainAttestation
 }
 
-type BuyerAttest = Attest & { offer: Omit<Offer, "_tag"> };
+export type BuyerAttest = Attest & { offer: Omit<Offer, "_tag"> };
 type SellerAttest = Attest & { result: string };
 
 export type BuyerMessage = { offerId: string; responseTopic?: string } & (
