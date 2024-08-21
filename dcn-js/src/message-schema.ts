@@ -3,7 +3,7 @@ import type { SignedOffchainAttestation } from "@ethereum-attestation-service/ea
 
 interface Offer {
   _tag: "offer";
-  buyParams: BuyData;
+  buyData: BuyData;
 }
 
 interface Cancel {

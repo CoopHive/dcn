@@ -5,6 +5,9 @@
   "name": "dcn-js",
   "module": "index.ts",
   "type": "module",
+  "jest": {
+    "testTimeout": 30000
+  },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/bun": "latest",

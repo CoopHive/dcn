@@ -13,9 +13,9 @@ import  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolve
 import  SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
 import  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
-import type { BuyStruct, BuyParams } from 'coophive-sdk'
-import { Offer,BuyerMessage, SellerMessage } from './message-schema.ts';
-
+import type { BuyStruct, BuyParams, BuyData } from 'coophive-sdk'
+import { BuyerMessage, SellerMessage } from './message-schema.ts';
+import type { BuyerAttest } from './message-schema.ts';
 import { 
   signOffchainBuyMessage,
   verifyOffchainBuyMessage,
@@ -84,7 +84,7 @@ export class Client {
     this.consumer = consumer;
   }
 
-  async proposeDeal(offer: BuyerAttest): Promise<void> {
+  async proposeDeal(buyData: BuyData): Promise<void> {
     this.producer.connect();
     try {
       const offchainAttestation = await signOffchainBuyMessage(
@@ -92,16 +92,18 @@ export class Client {
         this.walletClient,
         {
           schemaUID: this.buyerSchemaUID,
-          demander: this.account.address
-          data: offer.buyData
+          demander: this.account.address,
+          data: buyData
+        }
       )
+
 
       await this.producer.send({
         topic: 'buyer-offers',
         messages: [{ value: JSON.stringify( offchainAttestation) }],
       })
-      console.log('offer sent', offer)
-
+      console.log('offer sent', offchainAttestation)
+      /*
       if (offer.responseTopic) {
         await this.consumer.connect()
         await this.consumer.subscribe({ topic: offer.responseTopic, fromBeginning: true })
@@ -142,9 +144,11 @@ export class Client {
         })
       }
       
+ */
     } catch (e) {
       console.error(e);
     }
-    
+
+   
   }
 }
