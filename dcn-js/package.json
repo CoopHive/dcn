@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^2.5.0",
+    "@metamask/providers": "^17.1.2",
     "@types/pg": "^8.11.6",
     "coophive-sdk": "link:coophive-sdk",
     "docker-compose": "^0.24.8",

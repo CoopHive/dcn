@@ -3,24 +3,29 @@ import "dotenv/config";
 import type { Producer, Consumer } from 'kafkajs';
 
 import type { PrivateKeyAccount, PublicClient, WalletClient  } from 'viem'
-import { createWalletClient, createPublicClient, webSocket, getContract } from 'viem'
+import { createWalletClient, createPublicClient, http, webSocket, getContract, publicActions, custom } from 'viem'
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-import EAS from './artifacts/EAS.json'
-import SchemaRegistry from './artifacts/SchemaRegistry.json'
-import  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
-import  SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
-import  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
+import * as EAS from './artifacts/EAS.json'
+import * as SchemaRegistry from './artifacts/SchemaRegistry.json'
+import * as  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
+import* as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
+import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
-import type { BuyStruct, BuyParams, BuyData } from 'coophive-sdk'
-import { BuyerMessage, SellerMessage } from './message-schema.ts';
+//import type { BuyStruct, BuyParams, BuyData } from 'coophive-sdk'
+import type { BuyerMessage, SellerMessage } from './message-schema';
 import type { BuyerAttest } from './message-schema.ts';
+
 import { 
   signOffchainBuyMessage,
   verifyOffchainBuyMessage,
 
 } from 'coophive-sdk'
+
+
+
+
 export class Client {
   account: PrivateKeyAccount;
   publicClient: PublicClient;
@@ -50,16 +55,18 @@ export class Client {
     consumer: Consumer;
   }) {
     this.account = privateKeyToAccount(privateKey);
-    
+
+   //@ts-ignore 
     this.publicClient = createPublicClient({
+      //account: this.account,
       chain: baseSepolia,
-      transport: webSocket(rpcUrl),
+      transport: http(rpcUrl),
     });
     this.walletClient = createWalletClient({
       account: this.account,
       chain: baseSepolia,
-      transport: webSocket(rpcUrl),
-    });
+      transport: http(rpcUrl),
+    }).extend(publicActions);
 
     this.buyCollateralResolver = getContract({
       address: BuyCollateralResolver.address as `0x${string}`,
@@ -84,9 +91,14 @@ export class Client {
     this.consumer = consumer;
   }
 
-  async proposeDeal(buyData: BuyData): Promise<void> {
+  async proposeDeal(buyData: any): Promise<void> {
+    console.log(EAS.addressBaseSepolia)
+    console.log(this.buyerSchemaUID)
+    console.log('buyData', buyData)
     this.producer.connect();
     try {
+      console.log('this', this.walletClient)
+
       const offchainAttestation = await signOffchainBuyMessage(
         EAS.addressBaseSepolia,
         this.walletClient,
@@ -96,6 +108,7 @@ export class Client {
           data: buyData
         }
       )
+      console.log('offchain', offchainAttestation)
 
 
       await this.producer.send({
