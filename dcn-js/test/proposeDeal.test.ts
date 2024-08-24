@@ -15,7 +15,7 @@ describe("proposeDeal",  () => {
       throw new Error("Please set PRIVATE_KEY env variable")
     }
     const client = new Client({
-      rpcUrl: "https://base-sepolia.g.alchemy.com/v2/cM8o_2P2tP82OEJYIrHtgCyT1atWpZ61",
+      rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
       //rpcUrl: `http://127.0.0.1:8545`,
       privateKey: process.env.PRIVATE_KEY as `0x${string}`,
       producer,

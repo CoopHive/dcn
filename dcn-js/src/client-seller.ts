@@ -32,6 +32,7 @@ export const onOffer = async (offer: BuyerMessage): Promise<SellerMessage> => {
   //
   const accepted: boolean = await judgeOffer(offer)
 
+
   if (accepted) {
     const offchainAttestation = await signOffchainBuyMessage(
       EAS.addressMainnet,

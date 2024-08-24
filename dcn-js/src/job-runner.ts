@@ -9,7 +9,9 @@ import * as path from 'node:path'
 export const runJob  = async (composeFile: string): Promise<any> => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
+
   const file = writeFileSync(`${__dirname}/docker-compose-import.yaml`, parse(composeFile))
+
   const jobPromise = new Promise(async (resolve, reject)  => {
     compose.upAll({
       cwd: path.join(__dirname),

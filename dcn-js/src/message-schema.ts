@@ -16,7 +16,7 @@ interface Attest {
   offchainAttestation?: SignedOffchainAttestation
 }
 
-export type BuyerAttest = Attest & { offer: Omit<Offer, "_tag"> };
+export type BuyerAttest = Attest& { offer: Omit<Offer, "_tag"> };
 type SellerAttest = Attest & { result: string };
 
 export type BuyerMessage = { offerId: string; responseTopic?: string } & (
