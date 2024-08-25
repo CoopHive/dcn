@@ -1,31 +1,55 @@
 version: '3.8'
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.2.1
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+  #  zookeeper:
+  #    image: confluentinc/cp-zookeeper:7.2.1
+  #    environment:
+  #      ZOOKEEPER_CLIENT_PORT: 2181
+  #      ZOOKEEPER_TICK_TIME: 2000
+  #    ports:
+  #      - "2181:2181"
+  #
+  #  kafka:
+  #    image: confluentinc/cp-kafka:7.2.1
+  #    depends_on:
+  #      - zookeeper
+  #    ports:
+  #      - "9092:9092"
+  #    environment:
+  #      KAFKA_BROKER_ID: 1
+  #      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  #      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #
 
-  kafka:
-    image: confluentinc/cp-kafka:7.2.1
-    depends_on:
-      - zookeeper
+  redis:
+    image: redis:6.2-alpine
     ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    volumes: 
+      - cache:/data
+    network_mode: 'host'
+
+#  seller-redis:
+#    image: redis:6.2-alpine
+#    ports:
+#      - '6380:6380'
+#    command: redis-server --port 6380 --save 20 1 --loglevel warning
+#    volumes: 
+#      - cache2:/data
+#    network_mode: 'host'
 
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest
-      #entrypoint: [ "anvil", "--fork-url", "https://site1.moralis-nodes.com/base-sepolia/${MORALIS}", "--fork-block-number", "14249993" ]
-    entrypoint: [ "anvil", "--fork-url", "https://rpc.ankr.com/base_sepolia/a2279c0eeef2b80a658c5fdc33ff20cd503853bcc0d86b67b7fdad60ca013117", "--fork-block-number", "14249993" ]
+    entrypoint: [ "anvil", "--fork-url", "https://site1.moralis-nodes.com/base-sepolia/${MORALIS}", "--fork-block-number", "14249993" ]
     ports:
       - "8545:8545"
     network_mode: 'host'
+
+volumes:
+  cache:
+    driver: local
+  cache2:
+    driver: local

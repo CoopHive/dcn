@@ -1,7 +1,9 @@
 import "dotenv/config";
+
+import redis from 'redis'
 import { Wallet, getDefaultProvider, JsonRpcProvider, BrowserProvider  } from 'ethers';
 import { JsonRpcSigner } from 'ethers';
-import type { Producer, Consumer } from 'kafkajs';
+//import type { Producer, Consumer } from 'kafkajs';
 
 import type { PrivateKeyAccount, PublicClient, WalletClient  } from 'viem'
 import { createWalletClient, createPublicClient, http, webSocket, getContract, publicActions, custom, decodeAbiParameters } from 'viem'
@@ -28,6 +30,7 @@ import {
 
 
 export class Client {
+  isBuyer: boolean;
   privateKey: `0x${string}`
   account: PrivateKeyAccount;
   publicClient: PublicClient;
@@ -37,8 +40,10 @@ export class Client {
   sellCollateralResolver: any;
   validatorCollateralResolver: any;
 
-  producer: Producer;
-  consumer: Consumer;
+  publisher: any;
+  subscriber: any;
+  //producer: Producer;
+  //consumer: Consumer;
 
   buyerSchemaUID: `0x${string}` = '0x7674c84acee890ef03bdbe281853efce9a10afe427dbfb203577ff3137bd0349'
   validatorSchemaUID: `0x${string}` = '0xf91e3931e3cf85fc255a403e5ccec30d9d05fa7612ccad90eb9297d52d490979'
@@ -46,18 +51,23 @@ export class Client {
 
 
   constructor({
+    isBuyer,
     privateKey,
     rpcUrl,
-    producer,
-    consumer
+    redisUrl
+    //producer,
+    //consumer
   }: {
+    isBuyer: boolean;
     rpcUrl: string;
     privateKey: `0x${string}`;
-    producer: Producer;
-    consumer: Consumer;
+    redisUrl: string
+    //producer: Producer;
+    //consumer: Consumer;
   }) {
 
     return (async () => {
+      this.isBuyer = isBuyer
       this.privateKey = privateKey;
       this.account = privateKeyToAccount(this.privateKey);
       this.publicClient = createPublicClient({
@@ -89,12 +99,26 @@ export class Client {
         client: {wallet: this.walletClient}
       })
 
+      this.publisher = await redis.createClient({
+        url: redisUrl
+      });
+      await this.publisher.connect();
+      this.subscriber = await redis.createClient({
+        url: redisUrl
+      });
+      await this.subscriber.connect();
+      /*
       this.producer = producer;
       this.producer.connect();
 
       this.consumer = consumer;
       this.consumer.connect();
-      await this.consumer.subscribe({ topic: 'buyer-offers', fromBeginning: true })
+      if (this.isBuyer) {
+        await this.consumer.subscribe({ topic: 'seller-offers', fromBeginning: true })
+      } else {
+        await this.consumer.subscribe({ topic: 'buyer-offers', fromBeginning: true })
+      }
+      */
       return this
     })();
   }
@@ -112,12 +136,17 @@ export class Client {
         }
       )
       console.log('broadcasting offer from', this.account.address)
+      this.publisher.publish((this.isBuyer ? 'buyer-offers': 'seller-offers'), JSON.stringify(offchainAttestation, (key, value) => {
+        return typeof value === 'bigint' ? value.toString() : value 
+      }))
+      /*
       await this.producer.send({
-        topic: 'buyer-offers',
+        topic: this.isBuyer ? 'buyer-offers' : 'seller-offers',
         messages: [{ value: JSON.stringify(offchainAttestation, (key, value) => {
           return typeof value === 'bigint' ? value.toString() : value
         }) }],
       })
+     */
       /*
          if (offer.responseTopic) {
          await this.consumer.connect()
@@ -167,10 +196,77 @@ if (isValid) {
 
 
   async listenForOffers() {
+    if (!this.isBuyer) {
+      this.subscriber.subscribe('buyer-offers', async (message) => {
+        const offer = JSON.parse(message.toString())
+        const isVerified = await verifyOffchainBuyMessage(
+          EAS.addressBaseSepolia,
+          this.walletClient,
+          offer.message.recipient,
+          offer
+        )
+        const offerData = decodeAbiParameters(buyAbi, offer.message.data)
+        if (isVerified) {
+          const counterOffer: any = {
+            supplier: offerData[0],
+            jobCost: 200n,
+            paymentToken: EAS.addressBaseSepolia,
+            image: 'grycap/cowsay:latest',
+            prompt: 'hello coophive',
+            collateralRequested: 50n,
+            offerDeadline: (await this.publicClient.getBlockNumber()) + 1800n,
+            jobDeadline: (await this.publicClient.getBlockNumber()) + 3600n,
+            arbitrationDeadline: (await this.publicClient.getBlockNumber()) + 7200n
+          }
+          this.offer(counterOffer)
 
+        }
+      })
+    } else {
+      this.subscriber.subscribe('seller-offers', async (message) => {
+        const offer = JSON.parse(message.toString())
+        const offerData = decodeAbiParameters(buyAbi, offer.message.data)
+        const isVerified = await verifyOffchainBuyMessage(
+          EAS.addressBaseSepolia,
+          this.walletClient,
+          offer.message.recipient,
+          offer
+        )
+        if (isVerified) {
+            const finalOffer: any = {
+              supplier: offerData[0],
+              jobCost: offerData[1],
+              paymentToken: offerData[2],
+              image: offerData[3],
+              prompt: offerData[4],
+              collateralRequested: offerData[5],
+              offerDeadline: offerData[6],
+              jobDeadline: offerData[7],
+              arbitrationDeadline: offerData[8]
+            }
+            console.log('finalOffer', finalOffer)
+            const tx = await attestBuyMessage(
+              EAS.addressBaseSepolia,
+              this.walletClient,
+              {
+                schemaUID: this.buyerSchemaUID,
+                demander: this.account.address,
+                data: finalOffer
+              }
+            )
+        }
+      })
+    }
+    /*
     await this.consumer.run({
-      eachMessage: async ({ message }) => {
-        console.log('hello !')
+      eachMessage: async ({topic, message}) => {
+        if (topic === 'seller-offers' && !this.isBuyer) {
+         return  
+        }
+        if (topic === 'buyer-offers' && this.isBuyer) {
+          return 
+        }
+        console.log('topic', topic)
         console.log('responding as', this.account.address)
         if (!message.value) {
           console.error('Received message with null value');
@@ -186,17 +282,18 @@ if (isValid) {
           offer
         )
         console.log('is verified', isVerified)
-        console.log('offer', offer)
+        //console.log('offer', offer)
         const offerData = decodeAbiParameters(buyAbi, offer.message.data)
         console.log('supplier', offerData[0])
+        console.log('this account', this.account.address)
         console.log('recipient', offer.message.recipient)
         if (isVerified) {
           // if supplier is this client and incoming attestation is not from it
-          if (offerData[0] == this.account.address && offer.message.recipient != this.account.address) {
+          if (topic === 'buyer-offers') {
             console.log('counter offering')
             // this is an offer by which i'm supplying compute
             const counterOffer: any = {
-              supplier: this.account.address,
+              supplier: offerData[0],
               jobCost: 200n,
               paymentToken: EAS.addressBaseSepolia,
               image: 'grycap/cowsay:latest',
@@ -208,12 +305,10 @@ if (isValid) {
             }
             this.offer(counterOffer)
           // if supplier is not this client and incoming attestation is from it 
-          } else if (offerData[0] != this.account.address) {
-
+          } else if (topic === 'seller-offers') {
             console.log('accepting, attesting on chain')
             // this is an offer by which i'm receiving compute
             // auto accept counter offer
-            console.log(offer)
             const finalOffer: any = {
               supplier: offerData[0],
               jobCost: offerData[1],
@@ -225,6 +320,7 @@ if (isValid) {
               jobDeadline: offerData[7],
               arbitrationDeadline: offerData[8]
             }
+            console.log('finalOffer', finalOffer)
             const tx = await attestBuyMessage(
               EAS.addressBaseSepolia,
               this.walletClient,
@@ -234,16 +330,20 @@ if (isValid) {
                 data: finalOffer
               }
             )
+            //console.log('tx', tx);
             const receipt = await tx.wait()
             console.log('receipt', receipt)
 
           } else {
-            // Not relevant to me
+            console.log('hmmmmm')
           }
         } else {
+          console.log('not verified')
           // TODO: negotiate new paramets or reject
         }
       }
     })
+   */
   }
+
 }
