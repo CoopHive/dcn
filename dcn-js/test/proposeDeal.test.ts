@@ -9,27 +9,29 @@ import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
 import { producer, consumer } from '../src/kafka-config'
 import type { BuyerAttest } from '../src/message-schema';
 //import type { BuyStruct } from 'coophive-sdk';
-describe("proposeDeal",  () => {
+describe("proposeDeal", async  () => {
   test("can use client to send an offchain attestation over buyer-offers", async () => {
     if (!process.env.PRIVATE_KEY_BUYER || !process.env.PRIVATE_KEY_SELLER) {
       throw new Error("Please set PRIVATE_KEY_BUYER and PRIVATE_KEY_SELLER env variable")
     }
-    const buyersClient = new Client({
-      rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
-      //rpcUrl: `http://127.0.0.1:8545`,
+    const buyersClient = await new Client({
+      //rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
+      rpcUrl: `http://127.0.0.1:8545`,
       privateKey: process.env.PRIVATE_KEY_BUYER as `0x${string}`,
       producer,
       consumer
     })
     
-    const sellersClient = new Client({
-      rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
-      //rpcUrl: `http://127.0.0.1:8545`,
+    const sellersClient = await new Client({
+      //rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
+      rpcUrl: `http://127.0.0.1:8545`,
       privateKey: process.env.PRIVATE_KEY_SELLER as `0x${string}`,
       producer,
       consumer
     })
+    console.log(buyersClient.account.address)
 
+    await buyersClient.listenForOffers()
     await sellersClient.listenForOffers()
 
     const offer: any = {
@@ -45,6 +47,8 @@ describe("proposeDeal",  () => {
       }
 
     await buyersClient.offer(offer)
+    // new promise wait for 10 seconds
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     
   })
