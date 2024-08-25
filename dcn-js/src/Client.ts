@@ -27,6 +27,7 @@ import {
 
 
 export class Client {
+  privateKey: `0x${string}`
   account: PrivateKeyAccount;
   publicClient: PublicClient;
   walletClient: WalletClient;
@@ -54,49 +55,49 @@ export class Client {
     producer: Producer;
     consumer: Consumer;
   }) {
-      this.account = privateKeyToAccount(privateKey);
+    this.privateKey = privateKey;
+    this.account = privateKeyToAccount(this.privateKey);
+    this.publicClient = createPublicClient({
+      //account: this.account,
+      chain: baseSepolia,
+      transport: http(rpcUrl),
+    });
+    this.walletClient = createWalletClient({
+      account: this.account,
+      chain: baseSepolia,
+      transport: http(rpcUrl),
+    })
 
-      this.publicClient = createPublicClient({
-        //account: this.account,
-        chain: baseSepolia,
-        transport: http(rpcUrl),
-      });
-      this.walletClient = createWalletClient({
-        account: this.account,
-        chain: baseSepolia,
-        transport: http(rpcUrl),
-      })
+    this.buyCollateralResolver = getContract({
+      address: BuyCollateralResolver.address as `0x${string}`,
+      abi: BuyCollateralResolver.abi,
+      client: {wallet: this.walletClient}
+    })
 
-      this.buyCollateralResolver = getContract({
-        address: BuyCollateralResolver.address as `0x${string}`,
-        abi: BuyCollateralResolver.abi,
-        client: {wallet: this.walletClient}
-      })
+    this.sellCollateralResolver = getContract({
+      address: SellCollateralResolver.address as `0x${string}`,
+      abi: SellCollateralResolver.abi,
+      client: {wallet: this.walletClient}
+    })
 
-      this.sellCollateralResolver = getContract({
-        address: SellCollateralResolver.address as `0x${string}`,
-        abi: SellCollateralResolver.abi,
-        client: {wallet: this.walletClient}
-      })
+    this.validatorCollateralResolver = getContract({
+      address: TrustedValidatorResolver.address as `0x${string}`,
+      abi: TrustedValidatorResolver.abi,
+      client: {wallet: this.walletClient}
+    })
 
-      this.validatorCollateralResolver = getContract({
-        address: TrustedValidatorResolver.address as `0x${string}`,
-        abi: TrustedValidatorResolver.abi,
-        client: {wallet: this.walletClient}
-      })
+    this.producer = producer;
 
-      this.producer = producer;
-
-      this.consumer = consumer;
+    this.consumer = consumer;
 
   }
 
-  async proposeDeal(buyData: any): Promise<void> {
+  async offer(buyData: any): Promise<void> {
     this.producer.connect();
     try {
       const offchainAttestation = await signOffchainBuyMessage(
         EAS.addressBaseSepolia,
-        process.env.PRIVATE_KEY as `0x${string}`,
+        this.privateKey,
         this.walletClient,
         {
           schemaUID: this.buyerSchemaUID,
@@ -105,15 +106,12 @@ export class Client {
         }
       )
 
-
-      console.log('offchain', offchainAttestation)
-
-
       await this.producer.send({
         topic: 'buyer-offers',
-        messages: [{ value: JSON.stringify( offchainAttestation) }],
+        messages: [{ value: JSON.stringify(offchainAttestation, (key, value) => {
+          return typeof value === 'bigint' ? value.toString() : value
+        }) }],
       })
-      console.log('offer sent', offchainAttestation)
       /*
          if (offer.responseTopic) {
          await this.consumer.connect()
@@ -159,7 +157,32 @@ export class Client {
     } catch (e) {
       console.error(e);
     }
+  }
 
 
+  async listenForOffers() {
+    this.consumer.connect();
+    await this.consumer.subscribe({ topic: 'buyer-offers', fromBeginning: true });
+
+    await this.consumer.run({
+      eachMessage: async ({ message }) => {
+        console.log('hello !')
+        if (!message.value) {
+          console.error('Received message with null value');
+          return;
+        }
+
+        const offer = JSON.parse(message.value.toString())
+
+        console.log('offer', offer)
+        const isVerified = await verifyOffchainBuyMessage(
+          EAS.addressBaseSepolia,
+          this.walletClient,
+          offer.message.recipient,
+          offer
+        )
+        console.log('is verified', isVerified)
+      }
+    })
   }
 }
