@@ -2,15 +2,11 @@ import "dotenv/config";
 import {describe, expect, test} from '@jest/globals';
 import { fileURLToPath  } from 'url';
 import * as path from 'node:path'
-import { Client } from '../src/Client'
-
+import { Client, AgentType } from '../src/Client'
+import { zeroAddress } from 'viem'
 import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
 
 import type { BuyerAttest } from '../src/message-schema';
-//import { producer, consumer } from '../src/kafka-config'
-//
-//import { Kafka } from 'kafkajs';
-//import type { BuyStruct } from 'coophive-sdk';
 describe("proposeDeal", async  () => {
   test("negotiates deal over kafka", async () => {
     /*
@@ -23,7 +19,7 @@ describe("proposeDeal", async  () => {
       throw new Error("Please set PRIVATE_KEY_BUYER and PRIVATE_KEY_SELLER env variable")
     }
     const buyersClient = await new Client({
-      isBuyer: true,
+      role:  AgentType.BUYER,
       rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
       //rpcUrl: `http://127.0.0.1:8545`,
       redisUrl: `redis://127.0.0.1:6379`,
@@ -31,20 +27,27 @@ describe("proposeDeal", async  () => {
     })
     
     const sellersClient = await new Client({
-      isBuyer: false,
+      role: AgentType.SELLER,
       rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
       //rpcUrl: `http://127.0.0.1:8545`,
       redisUrl: `redis://127.0.0.1:6379`,
       privateKey: process.env.PRIVATE_KEY_SELLER as `0x${string}`,
     })
+    const validatorClient = await new Client({
+      role: AgentType:VALIDATOR,
+      rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
+      //rpcUrl: `http://127.0.0.1:8545`,
+      redisUrl: `redis://127.0.0.1:6379`,
+      privateKey: process.env.PRIVATE_KEY_VALIDATOR as `0x${string}`,
+    })
     console.log('buyer', buyersClient.account.address)
     console.log('seller', sellersClient.account.address)
 
-    await buyersClient.listenForOffers()
-    await sellersClient.listenForOffers()
+    await buyersClient.listen()
+    await sellersClient.listen()
 
     const offer: any = {
-            supplier: sellersClient.account.address, 
+            supplier: zeroAddress, 
             jobCost: 100n,
             paymentToken: MockERC20.address,
             image: 'grycap/cowsay:latest',
