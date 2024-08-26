@@ -34,7 +34,7 @@ describe("proposeDeal", async  () => {
       privateKey: process.env.PRIVATE_KEY_SELLER as `0x${string}`,
     })
     const validatorClient = await new Client({
-      role: AgentType:VALIDATOR,
+      role: AgentType.VALIDATOR,
       rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
       //rpcUrl: `http://127.0.0.1:8545`,
       redisUrl: `redis://127.0.0.1:6379`,

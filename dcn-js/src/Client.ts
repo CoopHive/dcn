@@ -155,14 +155,17 @@ export class Client {
     }
   }
 
-  async counterOffer(offer:any): Promise<void> {
+  async counterOffer(message:any): Promise<void> {
+    console.log('verifying')
+    console.log('message', message)
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
       this.walletClient,
-      offer.message.recipient,
-      offer
+      message.offchainAttestation.message.recipient,
+      message.offchainAttestation
     )
-    const offerData = decodeAbiParameters(buyAbi, offer.message.data)
+    console.log('isVerified', isVerified)
+    const offerData = decodeAbiParameters(buyAbi, message.offchainAttestation.message.data)
     if (isVerified) {
       const offer: any = {
         supplier: this.account.address,
@@ -185,7 +188,7 @@ export class Client {
           data: offer
         } 
       )
-      this.publisher.publish(`offers/${offer.message.recipient}`, JSON.stringify({tag:'counteroffer', offchainAttestation}, (key,value) => {
+      this.publisher.publish(`offers/${message.offchainAttestation.message.recipient}`, JSON.stringify({tag:'counteroffer', offchainAttestation}, (key,value) => {
         return typeof value === 'bigint' ? value.toString() : value 
       }))
 
@@ -193,13 +196,13 @@ export class Client {
   }
 
 
-  async finalizeDeal(offer:any) {
-    const offerData = decodeAbiParameters(buyAbi, offer.message.data)
+  async finalizeDeal(message:any) {
+    const offerData = decodeAbiParameters(buyAbi, message.offchainAttestation.message.data)
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
       this.walletClient,
-      offer.message.recipient,
-      offer
+      message.offchainAttestation.message.recipient,
+      message.offchainAttestation
     )
     const approve = await this.erc20.write.approve([this.buyCollateralResolver.address, offerData[1]]);
     const receipt = await this.publicClient.waitForTransactionReceipt({
@@ -289,7 +292,6 @@ export class Client {
 
 
   async listen() {
-
     switch (this.role) {
       case (AgentType.BUYER):
         this.subscriber.subscribe(`offers/${this.account.address}`, async (message) => {
