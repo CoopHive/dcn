@@ -1,12 +1,26 @@
 import "dotenv/config";
+import { fileURLToPath  } from 'url';
+import { readFileSync } from 'node:fs'
+import { stringify } from 'yaml'
+import * as path from 'node:path'
 
 import redis from 'redis'
+
 import { Wallet, getDefaultProvider, JsonRpcProvider, BrowserProvider  } from 'ethers';
 import { JsonRpcSigner } from 'ethers';
-//import type { Producer, Consumer } from 'kafkajs';
 
 import type { PrivateKeyAccount, PublicClient, WalletClient  } from 'viem'
-import { createWalletClient, createPublicClient, http, webSocket, getContract, publicActions, custom, decodeAbiParameters } from 'viem'
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  webSocket,
+  getContract,
+  publicActions,
+  custom,
+  decodeAbiParameters,
+  parseEventLogs
+} from 'viem'
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -22,7 +36,9 @@ import type { BuyerMessage, SellerMessage } from './message-schema';
 import type { BuyerAttest } from './message-schema.ts';
 
 import {
+  createSellAttestation,
   createBuyAttestation,
+  createValidationAttestation,
   buyAbi,
   signOffchainBuyMessage,
   verifyOffchainBuyMessage,
@@ -248,19 +264,19 @@ export class Client {
       })
       console.log('receipt', receipt)
       /*
-      console.log('final offer', finalOffer)
-      
-      const tx = await attestBuyMessage(
-        EAS.addressBaseSepolia,
-        this.walletClient,
-        {
-          schemaUID: this.buyerSchemaUID,
-          demander: this.account.address,
-          data: finalOffer
-        }
-      )
-      const receipt = await tx.wait()
-     */
+         console.log('final offer', finalOffer)
+
+         const tx = await attestBuyMessage(
+         EAS.addressBaseSepolia,
+         this.walletClient,
+         {
+         schemaUID: this.buyerSchemaUID,
+         demander: this.account.address,
+         data: finalOffer
+         }
+         )
+         const receipt = await tx.wait()
+       */
       this.publisher.publish(`offers/${this.account.address}`, JSON.stringify({tag: 'finalize', offer:finalOffer, receipt: receipt}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
       }))
@@ -270,53 +286,97 @@ export class Client {
   async collateralizeAndRunJob(message:any) {
     console.log('collateralizing and running job')
     try {
-      console.log(this.eas.read)
-      const buyerAttestation = await this.eas.read.getAttestation([message.receipt.logs[0].topics[1]])
-      const approve = await this.erc20.write.approve([this.sellCollateralResolver.address, buyerAttestation.collateral]);
-      const receipt = await this.publicClient.waitForTransactionReceipt({
+      const logs = parseEventLogs({
+        abi: EAS.abi,
+        logs: message.receipt.logs
+      })
+      console.log('logs', logs)
+      console.log('message.receipt.logs[0].data', message.receipt.logs[0].data)
+      console.log('logs[0].args.uid', logs[0].args.uid)
+      const buyerAttestation = await this.eas.read.getAttestation([message.receipt.logs[0].data])
+      const data = decodeAbiParameters(buyAbi, buyerAttestation.data)
+      console.log('buyerAttestation', buyerAttestation)
+      const approve = await this.erc20.write.approve([this.sellCollateralResolver.address, data[5]]);
+      let receipt = await this.publicClient.waitForTransactionReceipt({
         hash: approve
       })
 
-      const tx = await attestSellMessage(
-        EAS.addressBaseSepolia,
-        this.walletClient,
-        {
+      const hash = await this.eas.write.attest([
+        createSellAttestation({
           schemaUID: this.sellerSchemaUID,
-          demander: this.account.address,
-          data: {
-            collateral: buyerAttestation.collateral,
-          }
-        }
-      )
-      const attestReceipt = await tx.wait()
-      this.publisher.publish('validation-requests', JSON.stringify({tag: 'request', deal:buyerAttestation, receipt: receipt}))
+          seller: this.account.address,
+          collateral: data[5],
+          buyRefUID: message.receipt.logs[0].data
+        })
+      ])
+      receipt = await this.publicClient.waitForTransactionReceipt({
+        hash
+      })
+      console.log('receipt', receipt)
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const composeFile = readFileSync(`${__dirname}/../test/docker-compose.cowsay.yaml`, 'utf8')
+      const stringified = stringify(composeFile)
+      const stuff = await runJob(stringified)
+      this.publisher.publish(`offers/${buyerAttestation.attester}`, JSON.stringify({tag: 'results', results:stuff}, (key, value) => {
+        return typeof value === 'bigint' ? value.toString() : value
+      }))
+      /*
+         const tx = await attestSellMessage(
+         EAS.addressBaseSepolia,
+         this.walletClient,
+         {
+schemaUID: this.sellerSchemaUID,
+demander: this.account.address,
+data: {
+collateral: buyerAttestation.collateral,
+}
+}
+)
+const attestReceipt = await tx.wait()
+       */
+      console.log('hmm')
+      this.publisher.publish('validation-requests', JSON.stringify({tag: 'request', receipt: receipt, buyerAddress: buyerAttestation.attester}, (key, value) => {
+        return typeof value === 'bigint' ? value.toString() : value
+      }))
     } catch (e) {
       console.log(e)
       return e
     }
   }
+  /*
+     async requestValidation(results:any) {
+     console.log('requesting validation')
+     try {
+     this.publisher.publish('validation-requests', results)    
+     }  catch (e) {
+     console.log(e)
+     return e
+     }
+     }
+   */
 
-  async requestValidation(results:any) {
-    console.log('requesting validation')
-    try {
-      this.publisher.publish('validation-requests', results)    
-    }  catch (e) {
-      console.log(e)
-      return e
-    }
-  }
-
-  async validateJob(results:any) {
+  async validateJob(message:any) {
     console.log('validating job')
     try {
-      const tx = await createValidationAttestation(
-        this.validatorSchemaUID,
-        this.account.address,
-        true,
-        results.sellRefUID
-      )
-      await tx.wait()
-      this.publisher.publish(`offers/${results.buyerAddress}`, JSON.stringify({validated:true}))
+      const hash = await this.eas.write.attest([
+        createValidationAttestation({
+          schemaUID: this.validatorSchemaUID,
+          validator: this.account.address,
+          isApproved: true,
+          sellRefUID: message.receipt.logs[0].data
+        })
+      ])
+      /*
+         const tx = await createValidationAttestation(
+         this.validatorSchemaUID,
+         this.account.address,
+         true,
+         results.sellRefUID
+         )
+         await tx.wait()
+       */
+      this.publisher.publish(`offers/${message.buyerAddress}`, JSON.stringify({tag:'results', validated:true}))
     } catch (e) {
       console.log(e)
       return e
@@ -334,7 +394,8 @@ export class Client {
             this.finalizeDeal(message)
           break;
           case 'results':
-            this.requestValidation(message)
+            console.log('results-message', message)
+          //this.requestValidation(message)
         }
       })
       break;
@@ -348,17 +409,18 @@ export class Client {
         }
       })
       /*
-      this.subscriber.subscribe(`offers/${this.account.address}`, async (message) => {
-        message = JSON.parse(message.toString())
-        switch (message.tag) {
-          case 'deal':
-            await this.collateralizeAndRunJob(message)
-        }
-      })
-     */
+         this.subscriber.subscribe(`offers/${this.account.address}`, async (message) => {
+         message = JSON.parse(message.toString())
+         switch (message.tag) {
+         case 'deal':
+         await this.collateralizeAndRunJob(message)
+         }
+         })
+       */
       break;
       case (AgentType.VALIDATOR):
         this.subscriber.subscribe('validation-requests', async (message) => {
+        console.log('hello validator')
         message = JSON.parse(message.toString())
         switch (message.tag) {
           case 'request':

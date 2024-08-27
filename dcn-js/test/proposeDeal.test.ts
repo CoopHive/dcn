@@ -74,6 +74,7 @@ describe("proposeDeal", async  () => {
 
     await buyersClient.listen()
     await sellersClient.listen()
+    await validatorClient.listen()
 
     const offer: any = {
             supplier: zeroAddress, 
@@ -89,7 +90,7 @@ describe("proposeDeal", async  () => {
 
     await buyersClient.offer(offer)
     // new promise wait for 10 seconds
-    await new Promise(resolve => setTimeout(resolve, 30000));
+    await new Promise(resolve => setTimeout(resolve, 45000));
 
     
   })
