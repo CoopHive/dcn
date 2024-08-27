@@ -8,17 +8,10 @@ import { localhost, baseSepolia } from 'viem/chains'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
 
-import type { BuyerAttest } from '../src/message-schema';
 describe("proposeDeal", async  () => {
   test("negotiates deal over kafka", async () => {
     const rpcUrl = 'http://127.0.0.1:8545'
     //const rpcUrl = `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`
-    /*
-    const kafka = new Kafka({
-      clientId: 'my-app',
-      brokers: ['localhost:9092']
-    })
-   */
     if (!process.env.PRIVATE_KEY_BUYER || !process.env.PRIVATE_KEY_SELLER) {
       throw new Error("Please set PRIVATE_KEY_BUYER and PRIVATE_KEY_SELLER env variable")
     }
@@ -71,7 +64,7 @@ describe("proposeDeal", async  () => {
     await publicClient.waitForTransactionReceipt({hash})
     console.log('buyer', buyersClient.account.address)
     console.log('seller', sellersClient.account.address)
-
+    console.log('validator', validatorClient.account.address)
     await buyersClient.listen()
     await sellersClient.listen()
     await validatorClient.listen()
