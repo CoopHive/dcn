@@ -43,7 +43,7 @@ services:
 
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest
-    entrypoint: [ "anvil", "--fork-url", "https://site1.moralis-nodes.com/base-sepolia/${MORALIS}", "--fork-block-number", "14473374" ]
+    entrypoint: [ "anvil", "--fork-url", "https://site1.moralis-nodes.com/base-sepolia/${MORALIS}", "--fork-block-number", "14503596" ]
     ports:
       - "8545:8545"
     network_mode: 'host'

@@ -22,6 +22,7 @@ import type { BuyerMessage, SellerMessage } from './message-schema';
 import type { BuyerAttest } from './message-schema.ts';
 
 import {
+  createBuyAttestation,
   buyAbi,
   signOffchainBuyMessage,
   verifyOffchainBuyMessage,
@@ -94,7 +95,7 @@ export class Client {
       this.eas = getContract({
         address: EAS.addressBaseSepolia as `0x${string}`,
         abi: EAS.abi,
-        client: {wallet: this.walletClient}
+        client: {wallet: this.walletClient, public: this.publicClient}
       })
 
       this.erc20 = getContract({
@@ -124,10 +125,12 @@ export class Client {
       this.publisher = await redis.createClient({
         url: redisUrl
       });
+
       await this.publisher.connect();
       this.subscriber = await redis.createClient({
         url: redisUrl
       });
+
       await this.subscriber.connect();
 
       return this
@@ -135,6 +138,7 @@ export class Client {
   }
 
   async offer(buyData: any): Promise<void> {
+    console.log("offering" )
     try {
       const offchainAttestation = await signOffchainBuyMessage(
         EAS.addressBaseSepolia,
@@ -156,8 +160,7 @@ export class Client {
   }
 
   async counterOffer(message:any): Promise<void> {
-    console.log('verifying')
-    console.log('message', message)
+    console.log('counter offering')
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
       this.walletClient,
@@ -170,7 +173,7 @@ export class Client {
       const offer: any = {
         supplier: this.account.address,
         jobCost: 200n,
-        paymentToken: EAS.addressBaseSepolia,
+        paymentToken: ERC20Mock.address,
         image: 'grycap/cowsay:latest',
         prompt: 'hello coophive',
         collateralRequested: 50n,
@@ -188,6 +191,16 @@ export class Client {
           data: offer
         } 
       )
+
+      this.subscriber.subscribe(`offers/${message.offchainAttestation.message.recipient}`, async (message) => {
+        message = JSON.parse(message.toString())
+        switch (message.tag) {
+          case 'finalize':
+            this.collateralizeAndRunJob(message)
+          break
+        }
+      })
+
       this.publisher.publish(`offers/${message.offchainAttestation.message.recipient}`, JSON.stringify({tag:'counteroffer', offchainAttestation}, (key,value) => {
         return typeof value === 'bigint' ? value.toString() : value 
       }))
@@ -197,6 +210,7 @@ export class Client {
 
 
   async finalizeDeal(message:any) {
+    console.log('finalizing deal')
     const offerData = decodeAbiParameters(buyAbi, message.offchainAttestation.message.data)
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
@@ -221,7 +235,21 @@ export class Client {
         jobDeadline: offerData[7],
         arbitrationDeadline: offerData[8]
       }
-      console.log('finalOffer', finalOffer)
+
+      const hash = await this.eas.write.attest([
+        createBuyAttestation({
+          schemaUID: this.buyerSchemaUID,
+          demander: this.account.address,
+          data: finalOffer
+        })
+      ])
+      const receipt = await this.publicClient.waitForTransactionReceipt({
+        hash
+      })
+      console.log('receipt', receipt)
+      /*
+      console.log('final offer', finalOffer)
+      
       const tx = await attestBuyMessage(
         EAS.addressBaseSepolia,
         this.walletClient,
@@ -231,15 +259,19 @@ export class Client {
           data: finalOffer
         }
       )
-      console.log('tx', tx)
       const receipt = await tx.wait()
-      this.publisher.publish('buyer-offers', JSON.stringify({offer:finalOffer, receipt: receipt}))
+     */
+      this.publisher.publish(`offers/${this.account.address}`, JSON.stringify({tag: 'finalize', offer:finalOffer, receipt: receipt}, (key, value) => {
+        return typeof value === 'bigint' ? value.toString() : value
+      }))
     }
   }
 
-  async collateralizeAndRunJob(offer:any) {
+  async collateralizeAndRunJob(message:any) {
+    console.log('collateralizing and running job')
     try {
-      const buyerAttestation = await this.eas.read.getAttestation([offer.buyAttestationUID])
+      console.log(this.eas.read)
+      const buyerAttestation = await this.eas.read.getAttestation([message.receipt.logs[0].topics[1]])
       const approve = await this.erc20.write.approve([this.sellCollateralResolver.address, buyerAttestation.collateral]);
       const receipt = await this.publicClient.waitForTransactionReceipt({
         hash: approve
@@ -256,9 +288,8 @@ export class Client {
           }
         }
       )
-      console.log('tx', tx)
       const attestReceipt = await tx.wait()
-      this.publisher.publish('seller-offers', JSON.stringify({deal:buyerAttestation, receipt: receipt}))
+      this.publisher.publish('validation-requests', JSON.stringify({tag: 'request', deal:buyerAttestation, receipt: receipt}))
     } catch (e) {
       console.log(e)
       return e
@@ -266,6 +297,7 @@ export class Client {
   }
 
   async requestValidation(results:any) {
+    console.log('requesting validation')
     try {
       this.publisher.publish('validation-requests', results)    
     }  catch (e) {
@@ -275,6 +307,7 @@ export class Client {
   }
 
   async validateJob(results:any) {
+    console.log('validating job')
     try {
       const tx = await createValidationAttestation(
         this.validatorSchemaUID,

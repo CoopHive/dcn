@@ -11,6 +11,8 @@ import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
 import type { BuyerAttest } from '../src/message-schema';
 describe("proposeDeal", async  () => {
   test("negotiates deal over kafka", async () => {
+    const rpcUrl = 'http://127.0.0.1:8545'
+    //const rpcUrl = `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`
     /*
     const kafka = new Kafka({
       clientId: 'my-app',
@@ -25,11 +27,11 @@ describe("proposeDeal", async  () => {
     const walletClient = createWalletClient({
       account: deployer,  
       chain: baseSepolia,
-      transport: http(`http://127.0.0.1:8545`),
+      transport: http(rpcUrl),
     })
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http(`http://127.0.0.1:8545`),
+      transport: http(rpcUrl),
     })
 
 
@@ -44,32 +46,29 @@ describe("proposeDeal", async  () => {
 
     const buyersClient = await new Client({
       role:  AgentType.BUYER,
-      //rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
-      rpcUrl: `http://127.0.0.1:8545`,
+      rpcUrl,
       redisUrl: `redis://127.0.0.1:6379`,
       privateKey: process.env.PRIVATE_KEY_BUYER as `0x${string}`,
     })
     let hash =  await erc20.write.mint([buyersClient.account.address, parseEther('100')]);
-    publicClient.waitForTransactionReceipt({hash})
+    await publicClient.waitForTransactionReceipt({hash})
     
     const sellersClient = await new Client({
       role: AgentType.SELLER,
-      //rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
-      rpcUrl: `http://127.0.0.1:8545`,
+      rpcUrl,
       redisUrl: `redis://127.0.0.1:6379`,
       privateKey: process.env.PRIVATE_KEY_SELLER as `0x${string}`,
     })
     hash = await erc20.write.mint([sellersClient.account.address, parseEther('100')]);
-    publicClient.waitForTransactionReceipt({hash})
+    await publicClient.waitForTransactionReceipt({hash})
     const validatorClient = await new Client({
       role: AgentType.VALIDATOR,
-      //rpcUrl: `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`,
-      rpcUrl: `http://127.0.0.1:8545`,
+      rpcUrl,
       redisUrl: `redis://127.0.0.1:6379`,
       privateKey: process.env.PRIVATE_KEY_VALIDATOR as `0x${string}`,
     })
     hash = await erc20.write.mint([validatorClient.account.address, parseEther('100')]);
-    publicClient.waitForTransactionReceipt({hash})
+    await publicClient.waitForTransactionReceipt({hash})
     console.log('buyer', buyersClient.account.address)
     console.log('seller', sellersClient.account.address)
 
@@ -90,7 +89,7 @@ describe("proposeDeal", async  () => {
 
     await buyersClient.offer(offer)
     // new promise wait for 10 seconds
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    await new Promise(resolve => setTimeout(resolve, 30000));
 
     
   })
