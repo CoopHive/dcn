@@ -9,6 +9,8 @@ import * as path from 'node:path'
 export const runJob  = async (composeFile: string): Promise<any> => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
+  console.log(composeFile)
+  console.log(parse(composeFile))
 
   const file = writeFileSync(`${__dirname}/docker-compose-import.yaml`, parse(composeFile))
 

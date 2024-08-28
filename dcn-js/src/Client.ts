@@ -2,6 +2,7 @@ import "dotenv/config";
 import { fileURLToPath  } from 'url';
 import { readFileSync } from 'node:fs'
 import { stringify } from 'yaml'
+import yaml from 'js-yaml'
 import * as path from 'node:path'
 
 import redis from 'redis'
@@ -32,8 +33,8 @@ import* as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralRe
 import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
 //import type { BuyStruct, BuyParams, BuyData } from 'coophive-sdk'
-import type { BuyerMessage, SellerMessage } from './message-schema';
-import type { BuyerAttest } from './message-schema.ts';
+
+import type { BuyStruct } from 'coophive-sdk'
 
 import {
   createSellAttestation,
@@ -150,7 +151,7 @@ export class Client {
     })();
   }
 
-  async offer(buyData: any): Promise<void> {
+  async offer(offer: BuyStruct, job: any): Promise<void> {
     console.log("offering" )
     try {
       const offchainAttestation = await signOffchainBuyMessage(
@@ -160,11 +161,11 @@ export class Client {
         {
           schemaUID: this.buyerSchemaUID,
           demander: this.account.address,
-          data: buyData
+          data: offer
         }
       )
       console.log('broadcasting offer from', this.account.address)
-      this.publisher.publish('offers', JSON.stringify({tag:'offer', offchainAttestation}, (key, value) => {
+      this.publisher.publish('offers', JSON.stringify({tag:'offer', offchainAttestation, job}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value 
       }))
     } catch (e) {
@@ -172,7 +173,7 @@ export class Client {
     }
   }
 
-  async counterOffer({offchainAttestation}): Promise<void> {
+  async counterOffer({offchainAttestation, job}): Promise<void> {
     console.log('counter offering')
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
@@ -213,7 +214,7 @@ export class Client {
         }
       })
       console.log('publishing to offers/', offchainAttestation.message.recipient)
-      this.publisher.publish(`offers/${offchainAttestation.message.recipient}`, JSON.stringify({tag:'counteroffer', offchainAttestation:sellerOffchainAttestation}, (key,value) => {
+      this.publisher.publish(`offers/${offchainAttestation.message.recipient}`, JSON.stringify({tag:'counteroffer', offchainAttestation:sellerOffchainAttestation, job}, (key,value) => {
         return typeof value === 'bigint' ? value.toString() : value 
       }))
 
@@ -221,10 +222,9 @@ export class Client {
   }
 
 
-  async finalizeDeal({offchainAttestation}) {
+  async finalizeDeal({offchainAttestation, job}) {
     console.log('finalizing deal')
     const finalOffer = parseBuyAbi(offchainAttestation.message.data)
-    console.log('finalOffer', finalOffer)
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
       this.walletClient,
@@ -247,13 +247,13 @@ export class Client {
       const receipt = await this.publicClient.waitForTransactionReceipt({
         hash
       })
-      this.publisher.publish(`offers/${this.account.address}`, JSON.stringify({tag: 'finalize', offer:finalOffer, receipt: receipt}, (key, value) => {
+      this.publisher.publish(`offers/${this.account.address}`, JSON.stringify({tag: 'finalize', offer:finalOffer, receipt: receipt, job}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
       }))
     }
   }
 
-  async collateralizeAndRunJob({receipt}) {
+  async collateralizeAndRunJob({receipt, job}) {
     console.log('collateralizing and running job')
     try {
       /*
@@ -285,11 +285,8 @@ export class Client {
       const attestReceipt = await this.publicClient.waitForTransactionReceipt({
         hash
       })
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
-      const composeFile = readFileSync(`${__dirname}/../test/docker-compose.cowsay.yaml`, 'utf8')
-      const stringified = stringify(composeFile)
-      const stuff = await runJob(stringified)
+
+      const stuff = await runJob(stringify(yaml.dump(job)))
       
       this.publisher.publish(`offers/${buyerAttestation.attester}`, JSON.stringify({tag: 'results', results:stuff}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
@@ -338,7 +335,6 @@ export class Client {
       case (AgentType.BUYER):
         this.subscriber.subscribe(`offers/${this.account.address}`, async (message) => {
         message = JSON.parse(message.toString())
-        console.log('message', message)
         switch (message.tag) {
 
           case 'counteroffer':
