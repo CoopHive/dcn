@@ -1,11 +1,10 @@
 # dcn-js
 
 2. `cp .env.example .env`
-3. `git clone https://github.com/CoopHive/coophive-sdk`
-4. `cd coophive-sdk`
-5. `npm install`
-6. `npm link`
-7. `cd dcn-js`
+3. get base sepolia testnet crypto on 3 pks, one for buyer, seller and validator
+4. git clone polus-arcticus/eas-sdk
+5. cd eas-sdk && bun link
+6. cd dcn-js && bun link @coophive/eas-sdk
 8. `bun install`
 9. start redis and anvil node
 
