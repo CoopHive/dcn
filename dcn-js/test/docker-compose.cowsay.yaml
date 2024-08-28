@@ -1,0 +1,6 @@
+services:
+  cowsay:
+    image: grycap/cowsay:latest
+    entrypoint: 
+      - /usr/games/cowsay 
+      - "hello world"

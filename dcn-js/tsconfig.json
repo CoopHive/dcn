@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
     // Enable latest features
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
@@ -7,9 +8,10 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-
+    "types": ["node", "jest"],
     // Bundler mode
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
@@ -23,5 +25,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "include": ["src/**/*", "test/**/*"]
 }
