@@ -23,6 +23,7 @@ describe("proposeDeal", async  () => {
     const rpcUrl = 'http://127.0.0.1:8545'
     const redisUrl = `redis://127.0.0.1:6379`
     //const rpcUrl = `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`
+    //const rpcUrl = `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`
     if (!process.env.PRIVATE_KEY_BUYER && !process.env.PRIVATE_KEY_SELLER && !process.env.PRIVATE_KEY_VALIDATOR) {
       throw new Error("Please set PRIVATE_KEY_BUYER and PRIVATE_KEY_SELLER and PRIVATE_KEY_VALIDATOR env variable")
     }
@@ -91,7 +92,7 @@ describe("proposeDeal", async  () => {
       services: {
         cowsay: {
           image: 'grycap/cowsay:latest',
-          entrypoint: ['/usr/games/cowsay', 'hello coophive'],
+          entrypoint: ['/usr/games/cowsay', 'hello messaging meeting'],
         }
       }
     }

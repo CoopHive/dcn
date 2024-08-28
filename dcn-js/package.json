@@ -24,6 +24,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@coophive/eas-sdk": "^2.5.0",
     "@ethereum-attestation-service/eas-sdk": "^2.5.0",
     "@metamask/providers": "^17.1.2",
     "@types/pg": "^8.11.6",
