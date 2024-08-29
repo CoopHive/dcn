@@ -19,7 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe("proposeDeal", async  () => {
-  test("negotiates deal over kafka", async () => {
+  test("Deal occurs over redis pubsub", async () => {
     const rpcUrl = 'http://127.0.0.1:8545'
     const redisUrl = `redis://127.0.0.1:6379`
     //const rpcUrl = `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`

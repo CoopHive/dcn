@@ -162,7 +162,7 @@ export class Client {
     } catch (e) {
       console.error(e);
     }
-    console.log('*** OFFERING ***')
+    console.log('*** END OFFERING ***')
   }
 
   async counterOffer({offchainAttestation, job}): Promise<void> {
@@ -215,7 +215,7 @@ export class Client {
       }))
 
     }
-    console.log('*** COUNTEROFFERING ***')
+    console.log('*** END COUNTEROFFERING ***')
   }
 
 
@@ -253,7 +253,7 @@ export class Client {
         return typeof value === 'bigint' ? value.toString() : value
       }))
     }
-    console.log('*** FINALIZING DEAL ***')
+    console.log('*** END FINALIZING DEAL ***')
   }
 
   async collateralizeAndRunJob({receipt, job}) {
@@ -305,7 +305,7 @@ export class Client {
       console.log(e)
       return e
     }
-    console.log('*** FINALIZING DEAL ***')
+    console.log('*** END COLLATERALIZING AND RUNNING JOB ***')
   }
   /*
      async requestValidation(results:any) {
@@ -342,6 +342,7 @@ export class Client {
       console.log(e)
       return e
     }
+    console.log('*** END VALIDATING ***')
   }
 
 
