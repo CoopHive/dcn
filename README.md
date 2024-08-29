@@ -37,3 +37,6 @@ This project demonstrates a basic compute deal workflow using Coophive EAS Compo
 9. `docker compose up`
 
 10. `bun test --timout 60000`
+
+
+[demo-quick.webm](https://github.com/user-attachments/assets/f04af4cd-20f2-48ef-93ed-2f876f5883c4)
