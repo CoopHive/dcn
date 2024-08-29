@@ -32,19 +32,10 @@ import * as  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralRe
 import* as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
 import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
-//import type { BuyStruct, BuyParams, BuyData } from 'coophive-sdk'
-
-import type { BuyStruct } from 'coophive-sdk'
-
-import {
-  createSellAttestation,
-  createBuyAttestation,
-  createValidationAttestation,
-  parseBuyAbi,
-  signOffchainBuyMessage,
-  verifyOffchainBuyMessage,
-
-} from 'coophive-sdk'
+import type { BuyStruct } from './attestation-utils/buy'
+import { createValidationAttestation } from './attestation-utils/validation'
+import { createSellAttestation } from './attestation-utils/sell'
+import { createBuyAttestation, parseBuyAbi, signOffchainBuyMessage, verifyOffchainBuyMessage } from './attestation-utils/buy'
 
 import { runJob } from './job-runner'
 
@@ -82,8 +73,6 @@ export class Client {
     privateKey,
     rpcUrl,
     redisUrl
-    //producer,
-    //consumer
   }: {
     role: AgentType;
     rpcUrl: string;
@@ -152,10 +141,12 @@ export class Client {
   }
 
   async offer(offer: BuyStruct, job: any): Promise<void> {
-    console.log("offering" )
+    console.log('*** OFFERING ***')
+    console.log(`${this.role} is offering ${Number(offer.jobCost)} for ${offer.image} by creating an EAS offchain attestation`)
     try {
+      console.log('offer', offer)
       const offchainAttestation = await signOffchainBuyMessage(
-        EAS.addressBaseSepolia,
+        EAS.addressBaseSepolia as `0x${string}`,
         this.privateKey,
         this.walletClient,
         {
@@ -164,23 +155,27 @@ export class Client {
           data: offer
         }
       )
-      console.log('broadcasting offer from', this.account.address)
+      console.log('offchain attestation', offchainAttestation)
       this.publisher.publish('offers', JSON.stringify({tag:'offer', offchainAttestation, job}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value 
       }))
     } catch (e) {
       console.error(e);
     }
+    console.log('*** END OFFERING ***')
   }
 
   async counterOffer({offchainAttestation, job}): Promise<void> {
-    console.log('counter offering')
+    console.log('*** COUNTEROFFERING ***')
+    console.log(`${this.role} is responding to the job offer, first by verifying the job offer is legitimate by verifying the EAS offchain attestation`)
+
     const isVerified = await verifyOffchainBuyMessage(
-      EAS.addressBaseSepolia,
+      EAS.addressBaseSepolia as `0x${string}`,
       this.walletClient,
       offchainAttestation.message.recipient,
       offchainAttestation
     )
+    console.log(`the offchain attestation is ${isVerified ? 'valid' : 'invalid'}`)
     const offerData = parseBuyAbi(offchainAttestation.message.data)
     if (isVerified) {
       const offer: any = {
@@ -194,8 +189,9 @@ export class Client {
         jobDeadline: (await this.publicClient.getBlockNumber()) + 3600n,
         arbitrationDeadline: (await this.publicClient.getBlockNumber()) + 7200n
       }
+      console.log(`${this.role} is counter-offering ${Number(offer.jobCost)} for ${offer.image} by creating an EAS offchain attestation`)
       const sellerOffchainAttestation = await signOffchainBuyMessage(
-        EAS.addressBaseSepolia,
+        EAS.addressBaseSepolia as `0x${string}`,
         this.privateKey,
         this.walletClient,
         {
@@ -204,7 +200,7 @@ export class Client {
           data: offer
         } 
       )
-
+      console.log(`${this.role} is now listening and publishing to offers/`, offchainAttestation.message.recipient)
       this.subscriber.subscribe(`offers/${offchainAttestation.message.recipient}`, async (message) => {
         message = JSON.parse(message.toString())
         switch (message.tag) {
@@ -219,11 +215,13 @@ export class Client {
       }))
 
     }
+    console.log('*** END COUNTEROFFERING ***')
   }
 
 
   async finalizeDeal({offchainAttestation, job}) {
-    console.log('finalizing deal')
+    console.log(`*** FINALIZING DEAL ***`)
+    console.log(`${this.role} is responding to the counteroffer, first by verifying the job offer is legitimate by verifying the EAS offchain attestation`)
     const finalOffer = parseBuyAbi(offchainAttestation.message.data)
     const isVerified = await verifyOffchainBuyMessage(
       EAS.addressBaseSepolia,
@@ -231,6 +229,8 @@ export class Client {
       offchainAttestation.message.recipient,
       offchainAttestation
     )
+    console.log(`the offchain attestation is ${isVerified ? 'valid' : 'invalid'}`)
+    console.log(`approving the tokens to be pulled by the buyCollateralResolver on eas.attest`)
     const approve = await this.erc20.write.approve([this.buyCollateralResolver.address, finalOffer.jobCost]);
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash: approve
@@ -247,14 +247,18 @@ export class Client {
       const receipt = await this.publicClient.waitForTransactionReceipt({
         hash
       })
+      console.log(`the attestation hash is ${hash} and attestation uid is ${receipt.logs[0].data}`)
+      console.log(`${this.role} is now listening and publishing to offers/`, this.account.address)
       this.publisher.publish(`offers/${this.account.address}`, JSON.stringify({tag: 'finalize', offer:finalOffer, receipt: receipt, job}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
       }))
     }
+    console.log('*** END FINALIZING DEAL ***')
   }
 
   async collateralizeAndRunJob({receipt, job}) {
-    console.log('collateralizing and running job')
+    console.log(`*** COLLATERALIZING AND RUNNING JOB ***`)
+    console.log(`${this.role} is checking the buyer attestation existence and will deposit the collateral requested and run the job`)
     try {
       /*
       const logs = parseEventLogs({
@@ -264,11 +268,11 @@ export class Client {
       console.log('logs', logs)
      */
       const buyAttestationUID = receipt.logs[0].data
-      console.log('receipt.logs[0].data', buyAttestationUID)
       //console.log('logs[0].args.uid', logs[0].args.uid)
       const buyerAttestation = await this.eas.read.getAttestation([buyAttestationUID])
+      console.log('buyer attestation exists!:  ', buyerAttestation)
       const parsedBuyerAttestationData = parseBuyAbi(buyerAttestation.data)
-      console.log('parsedBuyerAttestationData', parsedBuyerAttestationData)
+      console.log(`approving the tokens to be pulled by the sellCollateralResolver on eas.attest`)
       const approve = await this.erc20.write.approve([this.sellCollateralResolver.address, parsedBuyerAttestationData.collateralRequested]);
       let approveReceipt = await this.publicClient.waitForTransactionReceipt({
         hash: approve
@@ -286,11 +290,14 @@ export class Client {
         hash
       })
 
+      console.log(`the attestation hash is ${hash} and attestation uid is ${attestReceipt.logs[0].data}`)
+      console.log(`${this.role} is now running the job`)
       const stuff = await runJob(stringify(yaml.dump(job)))
-      
+      console.log(`publishing to offers/${buyerAttestation.attester}`)
       this.publisher.publish(`offers/${buyerAttestation.attester}`, JSON.stringify({tag: 'results', results:stuff}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
       }))
+      console.log(`job results complete, sending to validator for validation`)
       this.publisher.publish('validation-requests', JSON.stringify({tag: 'request', receipt: attestReceipt, buyerAddress: buyerAttestation.attester}, (key, value) => {
         return typeof value === 'bigint' ? value.toString() : value
       }))
@@ -298,6 +305,7 @@ export class Client {
       console.log(e)
       return e
     }
+    console.log('*** END COLLATERALIZING AND RUNNING JOB ***')
   }
   /*
      async requestValidation(results:any) {
@@ -312,7 +320,8 @@ export class Client {
    */
 
   async validateJob({receipt, buyerAddress}) {
-    console.log('validating job')
+    console.log('*** VALIDATING ***')
+    console.log(`${this.role} is checking the output of the job to ensure correctness and then creating an attestation, to delegate the deposited collateral correctly`)
     try {
       const hash = await this.eas.write.attest([
         createValidationAttestation({
@@ -322,11 +331,18 @@ export class Client {
           sellRefUID: receipt.logs[0].data
         })
       ])
+      const validationReceipt = await this.publicClient.waitForTransactionReceipt({
+        hash
+      })
+      console.log(`the attestation hash is ${hash} and attestation uid is ${validationReceipt.logs[0].data}`)
+      console.log(`${this.role} is now listening and publishing to offers/`, buyerAddress)
+      
       this.publisher.publish(`offers/${buyerAddress}`, JSON.stringify({tag:'results', validated:true}))
     } catch (e) {
       console.log(e)
       return e
     }
+    console.log('*** END VALIDATING ***')
   }
 
 

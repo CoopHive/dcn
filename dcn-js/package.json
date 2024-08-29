@@ -24,23 +24,14 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@ethereum-attestation-service/eas-sdk": "^2.5.0",
+    "@coophive/eas-sdk": "^2.5.1",
     "@metamask/providers": "^17.1.2",
-    "@types/pg": "^8.11.6",
-    "coophive-sdk": "link:coophive-sdk",
     "docker-compose": "^0.24.8",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
     "js-yaml": "^4.1.0",
-    "kafkajs": "^2.2.4",
-    "kysely": "^0.27.4",
-    "monkey-around": "^3.0.0",
-    "pg": "^8.12.0",
-    "readable-stream": "^4.5.2",
     "redis": "^4.7.0",
     "viem": "^2.17.5",
-    "window": "^4.2.7",
-    "yaml": "^2.5.0",
-    "yaml-to-json": "^0.3.0"
+    "yaml": "^2.5.0"
   }
 }
