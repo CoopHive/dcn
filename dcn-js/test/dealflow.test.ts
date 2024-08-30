@@ -9,9 +9,9 @@ import yaml from 'js-yaml'
 
 import { zeroAddress, getContract, createWalletClient, http, parseEther, createPublicClient  } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { localhost, baseSepolia } from 'viem/chains'
+import { localhost, baseSepolia, filecoinCalibration } from 'viem/chains'
 
-import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
+import * as MockERC20 from '../src/artifacts/filecoinCalibration/ERC20Mock.json'
 
 import { Client, AgentType } from '../src/Client'
 
@@ -22,6 +22,7 @@ describe("proposeDeal", async  () => {
   test("Deal occurs over redis pubsub", async () => {
     const rpcUrl = 'http://127.0.0.1:8545'
     const redisUrl = `redis://127.0.0.1:6379`
+    //const rpcUrl = "https://rpc.ankr.com/filecoin_testnet"
     //const rpcUrl = `https://site1.moralis-nodes.com/base-sepolia/${process.env.MORALIS}`
     //const rpcUrl = `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`
     if (!process.env.PRIVATE_KEY_BUYER && !process.env.PRIVATE_KEY_SELLER && !process.env.PRIVATE_KEY_VALIDATOR) {
@@ -31,11 +32,13 @@ describe("proposeDeal", async  () => {
     const minter = privateKeyToAccount(process.env.PRIVATE_KEY_BUYER as `0x${string}`)
     const walletClient = createWalletClient({
       account: minter,  
-      chain: baseSepolia,
+      //chain: baseSepolia,
+      chain: filecoinCalibration,
       transport: http(rpcUrl),
     })
     const publicClient = createPublicClient({
-      chain: baseSepolia,
+      //chain: baseSepolia,
+      chain: filecoinCalibration,
       transport: http(rpcUrl),
     })
 
@@ -51,6 +54,7 @@ describe("proposeDeal", async  () => {
       redisUrl,
       privateKey: process.env.PRIVATE_KEY_BUYER as `0x${string}`,
     })
+    console.log('mint 1')
     let hash =  await erc20.write.mint([buyersClient.account.address, parseEther('100')]);
     await publicClient.waitForTransactionReceipt({hash})
     await buyersClient.listen()
@@ -61,6 +65,7 @@ describe("proposeDeal", async  () => {
       redisUrl,
       privateKey: process.env.PRIVATE_KEY_SELLER as `0x${string}`,
     })
+    console.log('mint 2')
     hash = await erc20.write.mint([sellersClient.account.address, parseEther('100')]);
     await publicClient.waitForTransactionReceipt({hash})
     await sellersClient.listen()
@@ -71,6 +76,7 @@ describe("proposeDeal", async  () => {
       redisUrl,
       privateKey: process.env.PRIVATE_KEY_VALIDATOR as `0x${string}`,
     })
+    //console.log('mint 3')
     hash = await erc20.write.mint([validatorClient.account.address, parseEther('100')]);
     await publicClient.waitForTransactionReceipt({hash})
     await validatorClient.listen()
@@ -98,7 +104,7 @@ describe("proposeDeal", async  () => {
     }
     await buyersClient.offer(offer, job)
     // new promise wait for 10 seconds
-    await new Promise(resolve => setTimeout(resolve, 45000));
+    await new Promise(resolve => setTimeout(resolve, 500000));
   })
 
 

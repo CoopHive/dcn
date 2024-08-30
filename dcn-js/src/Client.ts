@@ -22,15 +22,21 @@ import {
   decodeAbiParameters,
   parseEventLogs
 } from 'viem'
-import { baseSepolia } from 'viem/chains';
+import { baseSepolia, filecoinCalibration } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
 import * as EAS from './artifacts/EAS.json'
-import * as ERC20Mock from './artifacts/baseSepolia/ERC20Mock.json'
+//import * as ERC20Mock from './artifacts/baseSepolia/ERC20Mock.json'
+import * as ERC20Mock from './artifacts/filecoinCalibration/ERC20Mock.json'
+
 import * as SchemaRegistry from './artifacts/SchemaRegistry.json'
-import * as  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
-import* as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
-import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
+//import * as  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
+//import * as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
+//import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
+
+import * as  BuyCollateralResolver from './artifacts/filecoinCalibration/BuyCollateralResolver.json'
+import * as SellCollateralResolver from './artifacts/filecoinCalibration/SellCollateralResolver.json'
+import * as  TrustedValidatorResolver from './artifacts/filecoinCalibration/TrustedValidatorResolver.json'
 
 import type { BuyStruct } from './attestation-utils/buy'
 import { createValidationAttestation } from './attestation-utils/validation'
@@ -62,11 +68,15 @@ export class Client {
   subscriber: any;
   //producer: Producer;
   //consumer: Consumer;
+  //
+  // Sepolia
+  //buyerSchemaUID: `0x${string}` = '0x7674c84acee890ef03bdbe281853efce9a10afe427dbfb203577ff3137bd0349'
+  //validatorSchemaUID: `0x${string}` = '0xf91e3931e3cf85fc255a403e5ccec30d9d05fa7612ccad90eb9297d52d490979'
+  //sellerSchemaUID: `0x${string}` = '0x4d2b0cd74e4002985777098314337ba532d5784c745a6486c852753dbe7f262e' 
 
-  buyerSchemaUID: `0x${string}` = '0x7674c84acee890ef03bdbe281853efce9a10afe427dbfb203577ff3137bd0349'
-  validatorSchemaUID: `0x${string}` = '0xf91e3931e3cf85fc255a403e5ccec30d9d05fa7612ccad90eb9297d52d490979'
-  sellerSchemaUID: `0x${string}` = '0x4d2b0cd74e4002985777098314337ba532d5784c745a6486c852753dbe7f262e' 
-
+  validatorSchemaUID: `0x${string}` = '0xdb7190df8792aa2215315564ebe9ecedde2c1fc49d4813dd70fbbb1c39c04c63'
+  buyerSchemaUID: `0x${string}` = '0xf7d9f03d8871c6dcae7932b9d9b597fcdb2b364b103fd88672b9fb74d52eb3d8'
+  sellerSchemaUID: `0x${string}` = '0x22922e41634c00a271cabf296610c50fcbeab8590a4019fd6f01c55a2c9a86bf' 
 
   constructor({
     role,
@@ -86,17 +96,20 @@ export class Client {
       this.account = privateKeyToAccount(this.privateKey);
       this.publicClient = createPublicClient({
         //account: this.account,
-        chain: baseSepolia,
+        //chain: baseSepolia,
+        chain: filecoinCalibration,
         transport: http(rpcUrl),
       });
       this.walletClient = createWalletClient({
         account: this.account,
-        chain: baseSepolia,
+        //chain: baseSepolia,
+        chain: filecoinCalibration,
         transport: http(rpcUrl),
       })
 
       this.eas = getContract({
-        address: EAS.addressBaseSepolia as `0x${string}`,
+        //address: EAS.addressBaseSepolia as `0x${string}`,
+        address: EAS.addressFilecoinCalibration as `0x${string}`,
         abi: EAS.abi,
         client: {wallet: this.walletClient, public: this.publicClient}
       })
@@ -146,7 +159,8 @@ export class Client {
     try {
       console.log('offer', offer)
       const offchainAttestation = await signOffchainBuyMessage(
-        EAS.addressBaseSepolia as `0x${string}`,
+        //EAS.addressBaseSepolia as `0x${string}`,
+        EAS.addressFilecoinCalibration as `0x${string}`,
         this.privateKey,
         this.walletClient,
         {
@@ -170,7 +184,8 @@ export class Client {
     console.log(`${this.role} is responding to the job offer, first by verifying the job offer is legitimate by verifying the EAS offchain attestation`)
 
     const isVerified = await verifyOffchainBuyMessage(
-      EAS.addressBaseSepolia as `0x${string}`,
+      //EAS.addressBaseSepolia as `0x${string}`,
+      EAS.addressFilecoinCalibration as `0x${string}`,
       this.walletClient,
       offchainAttestation.message.recipient,
       offchainAttestation
@@ -191,7 +206,8 @@ export class Client {
       }
       console.log(`${this.role} is counter-offering ${Number(offer.jobCost)} for ${offer.image} by creating an EAS offchain attestation`)
       const sellerOffchainAttestation = await signOffchainBuyMessage(
-        EAS.addressBaseSepolia as `0x${string}`,
+        //EAS.addressBaseSepolia as `0x${string}`,
+        EAS.addressFilecoinCalibration as `0x${string}`,
         this.privateKey,
         this.walletClient,
         {
@@ -224,7 +240,8 @@ export class Client {
     console.log(`${this.role} is responding to the counteroffer, first by verifying the job offer is legitimate by verifying the EAS offchain attestation`)
     const finalOffer = parseBuyAbi(offchainAttestation.message.data)
     const isVerified = await verifyOffchainBuyMessage(
-      EAS.addressBaseSepolia,
+      //EAS.addressBaseSepolia,
+      EAS.addressFilecoinCalibration,
       this.walletClient,
       offchainAttestation.message.recipient,
       offchainAttestation

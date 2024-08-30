@@ -1,10 +1,15 @@
 import "dotenv/config";
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
+import "@starboardventures/hardhat-verify";
+
 import "hardhat-deploy";
 const config: HardhatUserConfig = {
   solidity: "0.8.26",
-
+  starboardConfig: {
+    baseURL: 'https://fvm-calibration-api.starboard.ventures',
+    network: 'Calibration'
+  },
   networks: {
     hardhat: {
       // Ethereum mainnet fork
@@ -19,6 +24,13 @@ const config: HardhatUserConfig = {
         blockNumber: 13713905
       },
      */
+      accounts: {
+        mnemonic: process.env.MNEMONIC
+      }
+    },
+    filecoinCalibration: {
+      url: `https://rpc.ankr.com/filecoin_testnet`,
+      chainId: 314159,
       accounts: {
         mnemonic: process.env.MNEMONIC
       }

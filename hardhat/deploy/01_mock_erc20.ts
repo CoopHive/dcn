@@ -9,7 +9,7 @@ export default async ({deployments}) => {
   const publicClient = await hre.viem.getPublicClient();
   const walletClients = await hre.viem.getWalletClients();
   const erc20Deploy = await deploy("ERC20Mock", {
-from: walletClients[0].account.address,
+    from: walletClients[0].account.address,
     args: [],
     log: true
   })

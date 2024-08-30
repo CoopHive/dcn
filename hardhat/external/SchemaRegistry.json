@@ -1,5 +1,6 @@
 {
     "addressBaseSepolia": "0x4200000000000000000000000000000000000020",
+    "addressFilecoinCalibration": "0x7cE23ee9023A138193C33F060A0060E918246E59",
     "abi": [
     {
       "inputs": [],
