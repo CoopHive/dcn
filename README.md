@@ -20,24 +20,33 @@ This project demonstrates a basic compute deal workflow using Coophive EAS Compo
 - [Anvil](https://anvil.readthedocs.io/en/latest/)
 - [Ethereum SDK](https://viem.sh/docs/getting-started)
 
-## Hardhat
+## Running Locally
+### Hardhat
 1. `cd hardhat`
-2. `cp .env.example .env`
+3. `cp .env.example .env`
 
-### Usage
-1. `npx hardhat test`
-2. `npx hardhat deploy --network baseSepolia`
-3. `npx hardhat run ./scripts/registerSchemas.ts --network baseSepolia`
-4. `npx hardhat run ./scripts/confirmBaseSepoliaDeployment.ts --network baseSepolia`
-
-## Network
+### DCN-js
 1. `cd dcn-js`
 2. `cp .env.example .env` fill out
 3. get base sepolia testnet crypto on 3 pks, one for buyer, seller and validator
 8. `bun install`
 9. `docker compose up`
 
+
+### Contract Tests
+1. `npx hardhat test`
+Mocha/Chai hardhat tests
+3. `npx hardhat deploy --network baseSepolia`
+   Deploy contracts to base sepolia chain
+5. `npx hardhat run ./scripts/registerSchemas.ts --network baseSepolia`
+  Register and link the contracts to EAS
+7. `npx hardhat run ./scripts/confirmBaseSepoliaDeployment.ts --network baseSepolia`
+ Check if things look okay
+
+### Network Tests
+
 10. `bun test --timout 60000`
+    run the e2e poc
 
 
 [demo-quick.webm](https://github.com/user-attachments/assets/f04af4cd-20f2-48ef-93ed-2f876f5883c4)
