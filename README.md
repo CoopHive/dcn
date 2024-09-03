@@ -6,6 +6,7 @@ This project demonstrates a basic compute deal workflow using Coophive EAS Compo
 ## Prerequisites
 
 - [Base Sepolia Testnet](https://sepolia.basescan.org/)
+- [Filecoin Calibration](https://docs.filecoin.io/networks/calibration)
 - [Alchemy](https://www.alchemy.com/) for an rpcUrl to base sepolia
 - [Faucet](https://www.alchemy.com/faucets/base-sepolia)
 
