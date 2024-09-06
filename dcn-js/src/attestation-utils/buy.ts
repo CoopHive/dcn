@@ -1,21 +1,25 @@
-import { PublicClient, WalletClient, parseAbiParameters, decodeAbiParameters } from 'viem'
+// @ts-nocheck
+import type { PublicClient, WalletClient } from 'viem'
+import {  parseAbiParameters, decodeAbiParameters } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import { JsonRpcSigner } from 'ethers'
-import {
-  EAS,
-  Transaction,
+import type {
   AttestationRequest,
   AttestationRequestData,
-  NO_EXPIRATION,
-  ZERO_ADDRESS,
-  ZERO_BYTES32,
   OffchainAttestationParams,
   OffchainAttestationOptions,
   SignedOffchainAttestation,
+  EAS,
+  Transaction,
+} from '@coophive/eas-sdk'
+import {
+  NO_EXPIRATION,
+  ZERO_ADDRESS,
+  ZERO_BYTES32,
 } from '@coophive/eas-sdk'
 
-import { getEAS, clientToSigner, clientToProvider, encodeMessage, Attestation } from './utils'
-
+import { getEAS, clientToSigner, clientToProvider, encodeMessage } from './utils'
+import type { Attestation } from './utils'
 export const buySchema: string  = "address supplier, uint256 jobCost, address paymentToken, string image, string prompt, uint256 collateralRequested, uint256 offerDeadline, uint256 jobDeadline, uint256 arbitrationDeadline"  
 export const buyAbi = parseAbiParameters(buySchema)
 

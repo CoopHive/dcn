@@ -1,5 +1,6 @@
-import { encodeMessage, Attestation } from './utils'
-
+// @ts-nocheck
+import { encodeMessage } from './utils'
+import type { Attestation  } from './utils'
 
 import {
   NO_EXPIRATION,

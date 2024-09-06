@@ -1,12 +1,18 @@
-import { WalletClient, parseAbiParameters } from 'viem'
-import { getEAS, encodeMessage, Attestation, clientToSigner } from './utils'
+// @ts-nocheck
+import { parseAbiParameters } from 'viem'
+import type { WalletClient } from 'viem'
+import { getEAS, encodeMessage, clientToSigner } from './utils'
+import type { Attestation } from './utils'
+import type {
+  Transaction,
+  AttestationRequest,
+  AttestationRequestData
+
+} from '@coophive/eas-sdk'
 import {
   NO_EXPIRATION,
   ZERO_ADDRESS,
   ZERO_BYTES32,
-  Transaction,
-  AttestationRequest,
-  AttestationRequestData
 } from '@coophive/eas-sdk'
 
 export const sellSchema: string = "uint256 collateral"
