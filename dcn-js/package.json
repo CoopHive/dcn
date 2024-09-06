@@ -26,6 +26,7 @@
   "dependencies": {
     "@coophive/eas-sdk": "^2.5.1",
     "@metamask/providers": "^17.1.2",
+    "@types/js-yaml": "^4.0.9",
     "docker-compose": "^0.24.8",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
