@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   BrowserProvider,
   FallbackProvider,
@@ -7,9 +8,9 @@ import {
 } from "ethers";
 
 import type { Account, Chain, Client, Transport, PublicClient, WalletClient  } from "viem";
-import { BuyMessage } from './buy'
-import { SellMessage } from './sell'
-import { ValidationMessage } from './validation'
+import type { BuyMessage } from './buy'
+import type { SellMessage } from './sell'
+import type { ValidationMessage } from './validation'
 import { EAS, SchemaEncoder } from '@coophive/eas-sdk'
 
 export type Attestation = {

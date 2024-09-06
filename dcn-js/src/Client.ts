@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "dotenv/config";
 import { fileURLToPath  } from 'url';
 import { readFileSync } from 'node:fs'
@@ -25,12 +26,13 @@ import {
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-import * as EAS from './artifacts/EAS.json'
-import * as ERC20Mock from './artifacts/baseSepolia/ERC20Mock.json'
-import * as SchemaRegistry from './artifacts/SchemaRegistry.json'
-import * as  BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
-import* as SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
-import * as  TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
+import  EAS from './artifacts/EAS.json'
+import ERC20Mock from './artifacts/baseSepolia/ERC20Mock.json'
+console.log('erc20', ERC20Mock)
+import  SchemaRegistry from './artifacts/SchemaRegistry.json'
+import   BuyCollateralResolver from './artifacts/baseSepolia/BuyCollateralResolver.json'
+import SellCollateralResolver from './artifacts/baseSepolia/SellCollateralResolver.json'
+import   TrustedValidatorResolver from './artifacts/baseSepolia/TrustedValidatorResolver.json'
 
 import type { BuyStruct } from './attestation-utils/buy'
 import { createValidationAttestation } from './attestation-utils/validation'

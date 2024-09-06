@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     // Enable latest features
     "lib": ["ESNext", "DOM"],

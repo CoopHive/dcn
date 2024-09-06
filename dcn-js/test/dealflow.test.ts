@@ -11,14 +11,14 @@ import { zeroAddress, getContract, createWalletClient, http, parseEther, createP
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { localhost, baseSepolia } from 'viem/chains'
 
-import * as MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
+import MockERC20 from '../src/artifacts/baseSepolia/ERC20Mock.json'
 
 import { Client, AgentType } from '../src/Client'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe("proposeDeal", async  () => {
+describe("proposeDeal", () => {
   test("Deal occurs over redis pubsub", async () => {
     const rpcUrl = 'http://127.0.0.1:8545'
     const redisUrl = `redis://127.0.0.1:6379`
