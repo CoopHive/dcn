@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "dotenv/config";
 import { fileURLToPath  } from 'url';
 import { readFileSync } from 'node:fs'
